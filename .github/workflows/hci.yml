@@ -1,0 +1,361 @@
+# Reusable workflow: тонкий адаптер GitHub Actions → ci <step>.
+# Логика (ветки, when, retry) — в вызывающем workflow / копии этого файла.
+# См. docs/pipeline.md
+#
+#   jobs:
+#     ci:
+#       uses: org/templates/.github/workflows/hci.yml@v1.0.0
+#       with:
+#         runtime: maven
+#         runtime-version: "21"
+#         build-image: registry.example/ci-openjdk-21:…-ci1.0.0
+#         tools-image: registry.example/ci-tools:…-ci1.0.0
+#       secrets: inherit
+
+name: Hyperion CI
+
+on:
+  workflow_call:
+    inputs:
+      runtime:
+        description: Рантайм (maven, gradle, nodejs, python, …)
+        type: string
+        required: true
+      runtime-version:
+        type: string
+        required: false
+        default: ""
+      service-type:
+        type: string
+        required: false
+        default: image
+      profile:
+        type: string
+        required: false
+        default: ""
+      workdir:
+        type: string
+        required: false
+        default: "."
+      strict:
+        type: boolean
+        required: false
+        default: true
+      build-image:
+        description: Образ сборки с /opt/ci
+        type: string
+        required: true
+      tools-image:
+        description: Образ tools (buildah, trivy, …)
+        type: string
+        required: true
+      ci-bin:
+        type: string
+        required: false
+        default: ci
+      image-build-mode:
+        type: string
+        required: false
+        default: auto
+      image-platforms:
+        type: string
+        required: false
+        default: linux/amd64
+      test:
+        type: boolean
+        required: false
+        default: true
+      lint:
+        type: boolean
+        required: false
+        default: true
+      deps-scan:
+        type: boolean
+        required: false
+        default: true
+      image-build:
+        type: boolean
+        required: false
+        default: true
+      image-scan:
+        type: boolean
+        required: false
+        default: true
+      image-publish:
+        type: boolean
+        required: false
+        default: true
+      publish:
+        type: boolean
+        required: false
+        default: true
+      sonar:
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.build-image }}
+    env:
+      HCI_RUNTIME: ${{ inputs.runtime }}
+      HCI_RUNTIME_VERSION: ${{ inputs.runtime-version }}
+      HCI_SERVICE_TYPE: ${{ inputs.service-type }}
+      HCI_PROFILE: ${{ inputs.profile }}
+      HCI_STRICT: ${{ inputs.strict }}
+      HCI_CI_BIN: ${{ inputs.ci-bin }}
+      HCI_WORKDIR: ${{ inputs.workdir }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: ci build
+        working-directory: ${{ inputs.workdir }}
+        run: ${{ inputs.ci-bin }} build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hci-build-${{ github.run_id }}
+          path: |
+            ${{ inputs.workdir }}/hci-artifacts/
+            ${{ inputs.workdir }}/target/
+            ${{ inputs.workdir }}/build/
+            ${{ inputs.workdir }}/dist/
+            ${{ inputs.workdir }}/.venv/
+            ${{ inputs.workdir }}/app
+          if-no-files-found: warn
+          retention-days: 1
+
+  lint:
+    if: ${{ inputs.lint }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.build-image }}
+    env:
+      HCI_RUNTIME: ${{ inputs.runtime }}
+      HCI_RUNTIME_VERSION: ${{ inputs.runtime-version }}
+      HCI_SERVICE_TYPE: ${{ inputs.service-type }}
+      HCI_PROFILE: ${{ inputs.profile }}
+      HCI_STRICT: ${{ inputs.strict }}
+      HCI_CI_BIN: ${{ inputs.ci-bin }}
+      HCI_WORKDIR: ${{ inputs.workdir }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: ci lint
+        working-directory: ${{ inputs.workdir }}
+        run: |
+          set +e
+          ${{ inputs.ci-bin }} lint
+          rc=$?
+          set -e
+          if [ "$rc" -eq 78 ]; then echo "::warning::hci lint: мягкий отказ"; exit 0; fi
+          exit "$rc"
+
+  deps-scan:
+    if: ${{ inputs.deps-scan }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.tools-image }}
+    env:
+      HCI_RUNTIME: ${{ inputs.runtime }}
+      HCI_RUNTIME_VERSION: ${{ inputs.runtime-version }}
+      HCI_SERVICE_TYPE: ${{ inputs.service-type }}
+      HCI_STRICT: ${{ inputs.strict }}
+      HCI_CI_BIN: ${{ inputs.ci-bin }}
+      HCI_WORKDIR: ${{ inputs.workdir }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: ci deps:scan
+        working-directory: ${{ inputs.workdir }}
+        run: |
+          set +e
+          ${{ inputs.ci-bin }} deps:scan
+          rc=$?
+          set -e
+          if [ "$rc" -eq 78 ]; then echo "::warning::hci deps:scan: мягкий отказ"; exit 0; fi
+          exit "$rc"
+
+  test:
+    if: ${{ inputs.test }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.build-image }}
+    needs: [build]
+    env:
+      HCI_RUNTIME: ${{ inputs.runtime }}
+      HCI_RUNTIME_VERSION: ${{ inputs.runtime-version }}
+      HCI_SERVICE_TYPE: ${{ inputs.service-type }}
+      HCI_PROFILE: ${{ inputs.profile }}
+      HCI_STRICT: ${{ inputs.strict }}
+      HCI_CI_BIN: ${{ inputs.ci-bin }}
+      HCI_WORKDIR: ${{ inputs.workdir }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: hci-build-${{ github.run_id }}
+          path: ${{ inputs.workdir }}
+      - name: ci test
+        working-directory: ${{ inputs.workdir }}
+        run: |
+          set +e
+          ${{ inputs.ci-bin }} test
+          rc=$?
+          set -e
+          if [ "$rc" -eq 78 ]; then echo "::warning::hci test: мягкий отказ"; exit 0; fi
+          exit "$rc"
+
+  sonar:
+    if: ${{ inputs.sonar }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.build-image }}
+    needs: [build]
+    env:
+      HCI_RUNTIME: ${{ inputs.runtime }}
+      HCI_RUNTIME_VERSION: ${{ inputs.runtime-version }}
+      HCI_SERVICE_TYPE: ${{ inputs.service-type }}
+      HCI_STRICT: ${{ inputs.strict }}
+      HCI_CI_BIN: ${{ inputs.ci-bin }}
+      HCI_WORKDIR: ${{ inputs.workdir }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: hci-build-${{ github.run_id }}
+          path: ${{ inputs.workdir }}
+      - name: ci sonar
+        working-directory: ${{ inputs.workdir }}
+        run: |
+          set +e
+          ${{ inputs.ci-bin }} sonar
+          rc=$?
+          set -e
+          if [ "$rc" -eq 78 ]; then echo "::warning::hci sonar: мягкий отказ"; exit 0; fi
+          exit "$rc"
+
+  image-build:
+    if: ${{ inputs.image-build && inputs.service-type == 'image' }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.tools-image }}
+      options: --privileged
+    needs: [build]
+    env:
+      HCI_RUNTIME: ${{ inputs.runtime }}
+      HCI_RUNTIME_VERSION: ${{ inputs.runtime-version }}
+      HCI_SERVICE_TYPE: image
+      HCI_STRICT: ${{ inputs.strict }}
+      HCI_CI_BIN: ${{ inputs.ci-bin }}
+      HCI_WORKDIR: ${{ inputs.workdir }}
+      HCI_IMAGE_BUILD_MODE: ${{ inputs.image-build-mode }}
+      HCI_IMAGE_PLATFORMS: ${{ inputs.image-platforms }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: hci-build-${{ github.run_id }}
+          path: ${{ inputs.workdir }}
+      - name: ci image:build
+        working-directory: ${{ inputs.workdir }}
+        run: ${{ inputs.ci-bin }} image:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hci-oci-${{ github.run_id }}
+          path: ${{ inputs.workdir }}/oci-image/
+          retention-days: 1
+
+  image-scan:
+    if: ${{ inputs.image-scan && inputs.service-type == 'image' }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.tools-image }}
+    needs: [image-build]
+    env:
+      HCI_RUNTIME: ${{ inputs.runtime }}
+      HCI_SERVICE_TYPE: image
+      HCI_STRICT: ${{ inputs.strict }}
+      HCI_CI_BIN: ${{ inputs.ci-bin }}
+      HCI_WORKDIR: ${{ inputs.workdir }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: hci-oci-${{ github.run_id }}
+          path: ${{ inputs.workdir }}/oci-image
+      - name: ci image:scan
+        working-directory: ${{ inputs.workdir }}
+        run: |
+          set +e
+          ${{ inputs.ci-bin }} image:scan
+          rc=$?
+          set -e
+          if [ "$rc" -eq 78 ]; then echo "::warning::hci image:scan: мягкий отказ"; exit 0; fi
+          exit "$rc"
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: hci-scan-${{ github.run_id }}
+          path: ${{ inputs.workdir }}/hci-artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  image-publish:
+    if: ${{ inputs.image-publish && inputs.service-type == 'image' && startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.tools-image }}
+    needs: [image-build, image-scan]
+    env:
+      HCI_RUNTIME: ${{ inputs.runtime }}
+      HCI_SERVICE_TYPE: image
+      HCI_CI_BIN: ${{ inputs.ci-bin }}
+      HCI_WORKDIR: ${{ inputs.workdir }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: hci-oci-${{ github.run_id }}
+          path: ${{ inputs.workdir }}/oci-image
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: hci-scan-${{ github.run_id }}
+          path: ${{ inputs.workdir }}/hci-artifacts
+      - name: ci image:publish
+        working-directory: ${{ inputs.workdir }}
+        run: ${{ inputs.ci-bin }} image:publish
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hci-manifest-${{ github.run_id }}
+          path: ${{ inputs.workdir }}/hci-artifacts/
+          retention-days: 90
+
+  publish:
+    if: ${{ inputs.publish && inputs.service-type == 'library' && startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.build-image }}
+    needs: [build]
+    env:
+      HCI_RUNTIME: ${{ inputs.runtime }}
+      HCI_RUNTIME_VERSION: ${{ inputs.runtime-version }}
+      HCI_SERVICE_TYPE: library
+      HCI_PROFILE: ${{ inputs.profile }}
+      HCI_CI_BIN: ${{ inputs.ci-bin }}
+      HCI_WORKDIR: ${{ inputs.workdir }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: hci-build-${{ github.run_id }}
+          path: ${{ inputs.workdir }}
+      - name: ci publish
+        working-directory: ${{ inputs.workdir }}
+        run: ${{ inputs.ci-bin }} publish
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hci-manifest-${{ github.run_id }}
+          path: ${{ inputs.workdir }}/hci-artifacts/
+          retention-days: 90

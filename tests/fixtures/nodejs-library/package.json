@@ -1,0 +1,10 @@
+{
+  "name": "hci-node-lib",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "node -e \"require('fs').mkdirSync('build/packages/hci-node-lib',{recursive:true}); require('fs').copyFileSync('package.json','build/packages/hci-node-lib/package.json'); require('fs').copyFileSync('index.js','build/packages/hci-node-lib/index.js')\"",
+    "test": "node --test",
+    "lint": "node -e \"process.exit(0)\""
+  }
+}

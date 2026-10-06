@@ -1,0 +1,6 @@
+e2e:
+  component: helm
+  inputs:
+    chart_dir: .
+    lint: true
+    publish: false

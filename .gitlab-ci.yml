@@ -1,0 +1,93 @@
+# CI репозитория шаблонов: проверка ядра, генерация компонентов, образы, e2e.
+
+stages: [lint, test, images, e2e, release]
+
+variables:
+  HCI_E2E_CORE_VERSION: "1.0.0"
+  GIT_DEPTH: "1"
+
+default:
+  interruptible: true
+  tags:
+    - $RUNNER_TAG
+
+include:
+  - local: images/wrappers.gitlab-ci.yml
+  - local: images/extra.gitlab-ci.yml
+  - local: tests/e2e.gitlab-ci.yml
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+lint:shellcheck:
+  stage: lint
+  image: $TOOLS_IMAGE
+  needs: []
+  script:
+    - find core -name '*.sh' -print0 | xargs -0 shellcheck -x
+    - shellcheck -x core/bin/ci tools/fetch-binaries.sh
+
+lint:generate:
+  stage: lint
+  image: $TOOLS_IMAGE
+  needs: []
+  script:
+    - python3 tools/generate.py --check
+
+lint:yaml:
+  stage: lint
+  image: $TOOLS_IMAGE
+  needs: []
+  script:
+    - |
+      python3 -c '
+      import pathlib, yaml
+      for p in pathlib.Path("templates").glob("*.yml"):
+          list(yaml.safe_load_all(p.read_text()))
+      '
+
+test:unit:
+  stage: test
+  image: $TOOLS_IMAGE
+  needs: []
+  script:
+    - bats tests/unit
+    - python3 -m unittest discover -s tests/unit -p 'test_*.py'
+
+# Проверка, что все гранулярные компоненты валидны как компоненты (include + inputs).
+test:granular-selfcheck:
+  stage: test
+  needs: []
+  trigger:
+    include:
+      - local: tests/granular-selfcheck.gitlab-ci.yml
+    strategy: depend
+
+.images:build:
+  stage: images
+  image: $TOOLS_IMAGE
+  interruptible: false
+  before_script:
+    - bash tools/fetch-binaries.sh
+  script:
+    - buildah login -u "$REGISTRY_USER" --password-stdin "$REGISTRY_HOST" <<<"$REGISTRY_PASSWORD"
+    - |
+      export HCI_IMAGES_REGISTRY="${HCI_IMAGES_REGISTRY:-$REGISTRY_HOST}"
+      export HCI_IMAGES_FOLDER="${DST_STORAGE_FOLDER:-hyperion}"
+      buildah bud --layers --pull -f "$CONTAINERFILE" --build-arg "BASE=$BASE" -t "$TARGET" .
+      buildah push --all "$TARGET" "docker://$TARGET"
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+release:
+  stage: release
+  image: $TOOLS_IMAGE
+  interruptible: false
+  script:
+    - echo "Версия ядра $(cat core/VERSION)"
+  rules:
+    - if: $CI_COMMIT_TAG

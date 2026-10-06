@@ -1,0 +1,128 @@
+# Сгенерировано tools/generate.py из core/runtimes/*/meta.yaml. Не редактировать вручную.
+spec:
+  inputs:
+    job_prefix:
+      default: ""
+      description: "Префикс имён джобов: несколько компонентов в одном пайплайне (монорепозиторий, матрица версий)"
+    workdir:
+      default: .
+      description: Каталог проекта относительно корня репозитория
+    strict:
+      type: boolean
+      default: true
+      description: false — падение мягких шагов (тесты, линтеры, анализы) не блокирует пайплайн
+    runner_tag:
+      default: "$RUNNER_TAG"
+      description: Тег раннера
+    registry_host:
+      default: "$NEXUS_HOST"
+      description: Реестр, из которого берутся образы джобов
+    push_registry_host:
+      default: ""
+      description: Реестр публикации образов (пусто — REGISTRY_INT_HOST или registry_host)
+    images_folder:
+      default: "$DST_STORAGE_FOLDER"
+      description: Каталог образов платформы в реестре
+    image_flavor:
+      default: ubi9
+      options:
+      - ubi9
+      - redos73-cert
+      description: Базовая ОС образов
+    core_version:
+      default: 1.0.0
+      description: Версия ядра ci (тег обёрточных образов)
+    ci_bin:
+      default: ci
+      description: Команда ядра (для e2e репозитория шаблонов — путь к core/bin/ci)
+    tools_image:
+      default: "$HCI_TOOLS_IMAGE_AUTO"
+      description: Образ для шагов образа и анализов
+    stage_test:
+      default: test
+      description: Stage для шагов test
+    runtime_version:
+      default: '312'
+      options:
+      - '39'
+      - '311'
+      - '312'
+      - '313'
+      description: Версия рантайма
+    service_type:
+      default: image
+      options:
+      - image
+      - library
+      description: image — сервис с образом, library — библиотека
+    image_build_mode:
+      default: auto
+      options:
+      - auto
+      - base
+      - dockerfile
+      - s2i
+      - cekit
+      description: Режим сборки образа
+    image_platforms:
+      default: linux/amd64
+      description: Платформы образа через запятую (multi-arch)
+    runtime_image:
+      default: ""
+      description: Базовый образ приложения (пусто — из meta.yaml для runtime_version)
+---
+"$[[ inputs.job_prefix ]]image:scan":
+  tags:
+  - "$[[ inputs.runner_tag ]]"
+  interruptible: true
+  variables:
+    HCI_RUNTIME: python
+    HCI_STRICT: "$[[ inputs.strict ]]"
+    HCI_WORKDIR: "$[[ inputs.workdir ]]"
+    HCI_IMAGE_FLAVOR: "$[[ inputs.image_flavor ]]"
+    HCI_IMAGES_FOLDER: "$[[ inputs.images_folder ]]"
+    HCI_REGISTRY_OCI_PUSH_HOST: "$[[ inputs.push_registry_host ]]"
+    HCI_TOOLS_IMAGE_AUTO: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-tools:$[[ inputs.image_flavor ]]-1.7.0-ci$[[ inputs.core_version ]]"
+    HCI_KCS_IMAGE_AUTO: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-images-scanner:v2.1.1-with-db-ci$[[ inputs.core_version ]]"
+    HCI_CI_BIN: "$[[ inputs.ci_bin ]]"
+    GIT_DEPTH: '1'
+    HCI_SERVICE_TYPE: "$[[ inputs.service_type ]]"
+    HCI_IMAGE_BUILD_MODE: "$[[ inputs.image_build_mode ]]"
+    HCI_IMAGE_PLATFORMS: "$[[ inputs.image_platforms ]]"
+    HCI_RUNTIME_IMAGE: "$[[ inputs.runtime_image ]]"
+    HCI_RUNTIME_VERSION: "$[[ inputs.runtime_version ]]"
+    HCI_BUILD_IMAGE_39: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-ubi9-python-39:1-175-ci$[[ inputs.core_version ]]"
+    HCI_BUILD_IMAGE_311: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-ubi9-python-311:1-175-ci$[[ inputs.core_version ]]"
+    HCI_BUILD_IMAGE_312: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-ubi9-python-312:1-175-ci$[[ inputs.core_version ]]"
+    HCI_BUILD_IMAGE_313: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-ubi9-python-313:1-175-ci$[[ inputs.core_version ]]"
+    HCI_BUILD_IMAGE_AUTO: "$HCI_BUILD_IMAGE_$[[ inputs.runtime_version ]]"
+    HCI_SONAR_IMAGE_AUTO: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-node.sonar:2.35.0-ci$[[ inputs.core_version ]]"
+  cache:
+    key:
+      prefix: python-$[[ inputs.runtime_version ]]
+      files:
+      - "$[[ inputs.workdir ]]/uv.lock"
+      - "$[[ inputs.workdir ]]/poetry.lock"
+    paths:
+    - "$[[ inputs.workdir ]]/.cache/pip"
+    - "$[[ inputs.workdir ]]/.venv"
+    policy: pull
+  stage: "$[[ inputs.stage_test ]]"
+  image: "$[[ inputs.tools_image ]]"
+  needs:
+  - job: "$[[ inputs.job_prefix ]]image:build"
+    artifacts: true
+    optional: true
+  script:
+  - export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"
+  - "${HCI_CI_BIN:-ci} image:scan"
+  artifacts:
+    when: always
+    paths:
+    - "$[[ inputs.workdir ]]/hci-artifacts/"
+    expire_in: 1 week
+  rules:
+  - when: on_success
+  allow_failure:
+    exit_codes:
+    - 78

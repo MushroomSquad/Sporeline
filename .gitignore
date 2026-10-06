@@ -1,0 +1,33 @@
+# Локальные артефакты ядра / сборок
+.worktrees/
+hci-artifacts/
+oci-image/
+.cache/
+.venv/
+node_modules/
+target/
+build/
+dist/
+.m2/
+.gradle/
+.sonar/
+coverage/
+*.nupkg
+*.crate
+
+# Скачанные статические бинарники для образов
+tools/bin/jq
+tools/bin/yq
+
+# Python / IDE
+__pycache__/
+*.pyc
+.pytest_cache/
+.idea/
+.vscode/
+*.swp
+*~
+
+# Локальное состояние AI-инструментов (планы/черновики сессий, не часть проекта)
+.omc/
+.claude/

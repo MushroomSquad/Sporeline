@@ -1,0 +1,89 @@
+# Сгенерировано tools/generate.py из core/runtimes/*/meta.yaml. Не редактировать вручную.
+spec:
+  inputs:
+    job_prefix:
+      default: ""
+      description: "Префикс имён джобов: несколько компонентов в одном пайплайне (монорепозиторий, матрица версий)"
+    workdir:
+      default: .
+      description: Каталог проекта относительно корня репозитория
+    strict:
+      type: boolean
+      default: true
+      description: false — падение мягких шагов (тесты, линтеры, анализы) не блокирует пайплайн
+    runner_tag:
+      default: "$RUNNER_TAG"
+      description: Тег раннера
+    registry_host:
+      default: "$NEXUS_HOST"
+      description: Реестр, из которого берутся образы джобов
+    push_registry_host:
+      default: ""
+      description: Реестр публикации образов (пусто — REGISTRY_INT_HOST или registry_host)
+    images_folder:
+      default: "$DST_STORAGE_FOLDER"
+      description: Каталог образов платформы в реестре
+    image_flavor:
+      default: ubi9
+      options:
+      - ubi9
+      - redos73-cert
+      description: Базовая ОС образов
+    core_version:
+      default: 1.0.0
+      description: Версия ядра ci (тег обёрточных образов)
+    ci_bin:
+      default: ci
+      description: Команда ядра (для e2e репозитория шаблонов — путь к core/bin/ci)
+    tools_image:
+      default: "$HCI_TOOLS_IMAGE_AUTO"
+      description: Образ для шагов образа и анализов
+    stage_publish:
+      default: deploy
+      description: Stage для шагов publish
+    chart_dir:
+      default: .
+      description: Каталог чарта относительно workdir
+    values:
+      default: values.yaml
+      description: Файлы values для проверки через запятую
+    publish_mode:
+      default: nexus
+      options:
+      - nexus
+      - oci
+      description: Куда публиковать чарт
+---
+"$[[ inputs.job_prefix ]]helm:publish":
+  tags:
+  - "$[[ inputs.runner_tag ]]"
+  interruptible: false
+  image: "$[[ inputs.tools_image ]]"
+  variables:
+    HCI_RUNTIME: none
+    HCI_STRICT: "$[[ inputs.strict ]]"
+    HCI_WORKDIR: "$[[ inputs.workdir ]]"
+    HCI_IMAGE_FLAVOR: "$[[ inputs.image_flavor ]]"
+    HCI_IMAGES_FOLDER: "$[[ inputs.images_folder ]]"
+    HCI_REGISTRY_OCI_PUSH_HOST: "$[[ inputs.push_registry_host ]]"
+    HCI_TOOLS_IMAGE_AUTO: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-tools:$[[ inputs.image_flavor ]]-1.7.0-ci$[[ inputs.core_version ]]"
+    HCI_KCS_IMAGE_AUTO: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-images-scanner:v2.1.1-with-db-ci$[[ inputs.core_version ]]"
+    HCI_CI_BIN: "$[[ inputs.ci_bin ]]"
+    GIT_DEPTH: '1'
+    HCI_HELM_CHART_DIR: "$[[ inputs.chart_dir ]]"
+    HCI_HELM_VALUES: "$[[ inputs.values ]]"
+    HCI_HELM_PUBLISH_MODE: "$[[ inputs.publish_mode ]]"
+  stage: "$[[ inputs.stage_publish ]]"
+  needs:
+  - job: "$[[ inputs.job_prefix ]]helm:lint"
+    artifacts: false
+    optional: true
+  script:
+  - export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"
+  - "${HCI_CI_BIN:-ci} helm:publish"
+  artifacts:
+    paths:
+    - "$[[ inputs.workdir ]]/hci-artifacts/"
+    expire_in: never
+  rules:
+  - if: "$CI_COMMIT_TAG"

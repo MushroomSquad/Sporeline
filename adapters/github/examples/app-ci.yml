@@ -1,0 +1,28 @@
+# Пример вызова reusable workflow из репозитория приложения.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["*"]
+  pull_request:
+
+jobs:
+  hci:
+    uses: org/hyperion/templates/.github/workflows/hci.yml@v1.0.0
+    with:
+      runtime: maven
+      runtime-version: "21"
+      service-type: image
+      build-image: registry.example/hyperion/ci-openjdk-21:ubi9-0.4.4-ci1.0.0
+      tools-image: registry.example/hyperion/ci-tools:ubi9-1.7.0-ci1.0.0
+      strict: true
+      test: true
+      lint: true
+      deps-scan: true
+      image-build: true
+      image-scan: true
+      image-publish: true
+      publish: false
+      sonar: false
+    secrets: inherit

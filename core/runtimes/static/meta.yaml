@@ -1,0 +1,21 @@
+name: static
+title: Статический сайт (nginx)
+description: Сборка фронтенда (npm/yarn/pnpm, если есть package.json) и упаковка в образ nginx через s2i.
+default_version: "126"
+service_types: [image]
+steps: [build, lint, image:build, image:scan, image:publish, cd:bump, cd:notify, deps:scan, sonar, appscreener, kcs]
+versions:
+  - id: "126"
+    label: "1.26"
+    build: "${HCI_REGISTRY_OCI_HOST}/ubi9/nodejs-22:9.7-1776920122"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/nginx-1.26:${HCI_IMAGE_FLAVOR}-0.2.0"
+images:
+  sonar: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/node.sonar:2.35.0"
+ports: [8080]
+schema:
+  name: Static
+  versions: false
+cache:
+  files: [package-lock.json, pnpm-lock.yaml]
+  paths: [.cache/npm, .cache/pnpm, .cache/yarn]
+artifacts: [dist]

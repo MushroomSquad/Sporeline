@@ -1,0 +1,482 @@
+# Сгенерировано tools/generate.py из core/runtimes/*/meta.yaml. Не редактировать вручную.
+spec:
+  description: Node.js. npm, yarn или pnpm (corepack). Скрипты build/test/lint из package.json.
+  inputs:
+    job_prefix:
+      default: ""
+      description: "Префикс имён джобов: несколько компонентов в одном пайплайне (монорепозиторий, матрица версий)"
+    workdir:
+      default: .
+      description: Каталог проекта относительно корня репозитория
+    strict:
+      type: boolean
+      default: true
+      description: false — падение мягких шагов (тесты, линтеры, анализы) не блокирует пайплайн
+    runner_tag:
+      default: "$RUNNER_TAG"
+      description: Тег раннера
+    registry_host:
+      default: "$NEXUS_HOST"
+      description: Реестр, из которого берутся образы джобов
+    push_registry_host:
+      default: ""
+      description: Реестр публикации образов (пусто — REGISTRY_INT_HOST или registry_host)
+    images_folder:
+      default: "$DST_STORAGE_FOLDER"
+      description: Каталог образов платформы в реестре
+    image_flavor:
+      default: ubi9
+      options:
+      - ubi9
+      - redos73-cert
+      description: Базовая ОС образов
+    core_version:
+      default: 1.0.0
+      description: Версия ядра ci (тег обёрточных образов)
+    ci_bin:
+      default: ci
+      description: Команда ядра (для e2e репозитория шаблонов — путь к core/bin/ci)
+    tools_image:
+      default: "$HCI_TOOLS_IMAGE_AUTO"
+      description: Образ для шагов образа и анализов
+    stage_build:
+      default: build
+      description: Stage для шагов build
+    stage_test:
+      default: test
+      description: Stage для шагов test
+    stage_publish:
+      default: deploy
+      description: Stage для шагов publish
+    runtime_version:
+      default: '22'
+      options:
+      - '10'
+      - '12'
+      - '14'
+      - '16'
+      - '18'
+      - '20'
+      - '22'
+      description: Версия рантайма
+    service_type:
+      default: image
+      options:
+      - image
+      - library
+      description: image — сервис с образом, library — библиотека
+    build_image:
+      default: "$HCI_BUILD_IMAGE_AUTO"
+      description: Образ сборки (по умолчанию — для runtime_version)
+    image_build_mode:
+      default: auto
+      options:
+      - auto
+      - base
+      - dockerfile
+      - s2i
+      - cekit
+      description: Режим сборки образа
+    image_platforms:
+      default: linux/amd64
+      description: Платформы образа через запятую (multi-arch)
+    runtime_image:
+      default: ""
+      description: Базовый образ приложения (пусто — из meta.yaml для runtime_version)
+    test:
+      type: boolean
+      default: true
+      description: Модульные тесты
+    lint:
+      type: boolean
+      default: true
+      description: Линтеры
+    publish:
+      type: boolean
+      default: true
+      description: Публикация библиотеки (по тегу; переопределите rules в проекте)
+    image_build:
+      type: boolean
+      default: true
+      description: Сборка образа
+    image_scan:
+      type: boolean
+      default: true
+      description: Анализ образа Trivy
+    image_publish:
+      type: boolean
+      default: true
+      description: Публикация образа (по тегу; переопределите rules в проекте)
+    cd_bump:
+      type: boolean
+      default: false
+      description: Бамп образа в GitOps-манифесте (git commit+push)
+    cd_notify:
+      type: boolean
+      default: false
+      description: Webhook-триггер GitOps-контроллера (ArgoCD/Flux)
+    deps_scan:
+      type: boolean
+      default: true
+      description: Анализ зависимостей
+    sonar:
+      type: boolean
+      default: false
+      description: SonarQube
+    svace:
+      type: boolean
+      default: false
+      description: Svace
+    appscreener:
+      type: boolean
+      default: false
+      description: Solar appScreener
+    kcs:
+      type: boolean
+      default: false
+      description: Kaspersky Container Security
+    appscreener_runner_tag:
+      default: "$RUNNER_TAG"
+      description: Тег раннера для appScreener
+    kcs_runner_tag:
+      default: hyperion-kcs
+      description: Тег раннера для KCS
+---
+.$[[ inputs.job_prefix ]]hci-nodejs:
+  tags:
+  - "$[[ inputs.runner_tag ]]"
+  interruptible: true
+  variables:
+    HCI_RUNTIME: nodejs
+    HCI_STRICT: "$[[ inputs.strict ]]"
+    HCI_WORKDIR: "$[[ inputs.workdir ]]"
+    HCI_IMAGE_FLAVOR: "$[[ inputs.image_flavor ]]"
+    HCI_IMAGES_FOLDER: "$[[ inputs.images_folder ]]"
+    HCI_REGISTRY_OCI_PUSH_HOST: "$[[ inputs.push_registry_host ]]"
+    HCI_TOOLS_IMAGE_AUTO: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-tools:$[[ inputs.image_flavor ]]-1.7.0-ci$[[ inputs.core_version ]]"
+    HCI_KCS_IMAGE_AUTO: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-images-scanner:v2.1.1-with-db-ci$[[ inputs.core_version ]]"
+    HCI_CI_BIN: "$[[ inputs.ci_bin ]]"
+    GIT_DEPTH: '1'
+    HCI_SERVICE_TYPE: "$[[ inputs.service_type ]]"
+    HCI_IMAGE_BUILD_MODE: "$[[ inputs.image_build_mode ]]"
+    HCI_IMAGE_PLATFORMS: "$[[ inputs.image_platforms ]]"
+    HCI_RUNTIME_IMAGE: "$[[ inputs.runtime_image ]]"
+    HCI_RUNTIME_VERSION: "$[[ inputs.runtime_version ]]"
+    HCI_BUILD_IMAGE_10: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-ubi8-nodejs-10:1-127-ci$[[ inputs.core_version ]]"
+    HCI_BUILD_IMAGE_12: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-ubi8-nodejs-12:1-113-ci$[[ inputs.core_version ]]"
+    HCI_BUILD_IMAGE_14: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-ubi8-nodejs-14:1-111-ci$[[ inputs.core_version ]]"
+    HCI_BUILD_IMAGE_16: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-nodejs-16:$[[ inputs.image_flavor ]]-0.2.2-ci$[[ inputs.core_version ]]"
+    HCI_BUILD_IMAGE_18: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-nodejs-18:$[[ inputs.image_flavor ]]-0.2.2-ci$[[ inputs.core_version ]]"
+    HCI_BUILD_IMAGE_20: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-ubi9-nodejs-20:9.7-1776920053-ci$[[ inputs.core_version ]]"
+    HCI_BUILD_IMAGE_22: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-ubi9-nodejs-22:9.7-1776920122-ci$[[ inputs.core_version ]]"
+    HCI_BUILD_IMAGE_AUTO: "$HCI_BUILD_IMAGE_$[[ inputs.runtime_version ]]"
+    HCI_SONAR_IMAGE_AUTO: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-node.sonar:2.35.0-ci$[[ inputs.core_version ]]"
+    HCI_SVACE_IMAGE_AUTO: "$[[ inputs.registry_host ]]/$[[ inputs.images_folder ]]/ci-svace:$[[ inputs.image_flavor ]]-svace-nodejs-0.7.0-ci$[[ inputs.core_version ]]"
+  cache:
+    key: &id001
+      prefix: nodejs-$[[ inputs.runtime_version ]]
+      files:
+      - "$[[ inputs.workdir ]]/package-lock.json"
+      - "$[[ inputs.workdir ]]/pnpm-lock.yaml"
+    paths: &id002
+    - "$[[ inputs.workdir ]]/.cache/npm"
+    - "$[[ inputs.workdir ]]/node_modules"
+    policy: pull
+"$[[ inputs.job_prefix ]]build":
+  extends: .$[[ inputs.job_prefix ]]hci-nodejs
+  stage: "$[[ inputs.stage_build ]]"
+  image: "$[[ inputs.build_image ]]"
+  needs: []
+  script:
+  - export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"
+  - "${HCI_CI_BIN:-ci} build"
+  cache:
+    key: *id001
+    paths: *id002
+    policy: pull-push
+  artifacts:
+    paths:
+    - "$[[ inputs.workdir ]]/build"
+    - "$[[ inputs.workdir ]]/package.json"
+    - "$[[ inputs.workdir ]]/package-lock.json"
+    - "$[[ inputs.workdir ]]/yarn.lock"
+    - "$[[ inputs.workdir ]]/pnpm-lock.yaml"
+    - "$[[ inputs.workdir ]]/hci-artifacts/"
+    expire_in: 1 day
+"$[[ inputs.job_prefix ]]test":
+  extends: .$[[ inputs.job_prefix ]]hci-nodejs
+  stage: "$[[ inputs.stage_test ]]"
+  image: "$[[ inputs.build_image ]]"
+  variables:
+    HCI_JOB_ENABLED: "$[[ inputs.test ]]"
+  needs:
+  - job: "$[[ inputs.job_prefix ]]build"
+    artifacts: true
+  script:
+  - export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"
+  - "${HCI_CI_BIN:-ci} test"
+  artifacts:
+    when: always
+    paths:
+    - "$[[ inputs.workdir ]]/hci-artifacts/"
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: "$[[ inputs.workdir ]]/coverage/cobertura-coverage.xml"
+    expire_in: 1 week
+  rules:
+  - if: "$HCI_JOB_ENABLED == \"true\""
+  allow_failure:
+    exit_codes:
+    - 78
+"$[[ inputs.job_prefix ]]lint":
+  extends: .$[[ inputs.job_prefix ]]hci-nodejs
+  stage: "$[[ inputs.stage_test ]]"
+  image: "$[[ inputs.build_image ]]"
+  variables:
+    HCI_JOB_ENABLED: "$[[ inputs.lint ]]"
+  needs: []
+  script:
+  - export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"
+  - "${HCI_CI_BIN:-ci} lint"
+  artifacts:
+    when: always
+    paths:
+    - "$[[ inputs.workdir ]]/hci-artifacts/"
+    expire_in: 1 week
+  rules:
+  - if: "$HCI_JOB_ENABLED == \"true\""
+  allow_failure:
+    exit_codes:
+    - 78
+"$[[ inputs.job_prefix ]]deps:scan":
+  extends: .$[[ inputs.job_prefix ]]hci-nodejs
+  stage: "$[[ inputs.stage_test ]]"
+  image: "$[[ inputs.tools_image ]]"
+  variables:
+    HCI_JOB_ENABLED: "$[[ inputs.deps_scan ]]"
+  needs: []
+  script:
+  - export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"
+  - "${HCI_CI_BIN:-ci} deps:scan"
+  artifacts:
+    when: always
+    paths:
+    - "$[[ inputs.workdir ]]/hci-artifacts/"
+    expire_in: 1 week
+  rules:
+  - if: "$HCI_JOB_ENABLED == \"true\""
+  allow_failure:
+    exit_codes:
+    - 78
+"$[[ inputs.job_prefix ]]sonar":
+  extends: .$[[ inputs.job_prefix ]]hci-nodejs
+  stage: "$[[ inputs.stage_test ]]"
+  image: "$HCI_SONAR_IMAGE_AUTO"
+  variables:
+    HCI_JOB_ENABLED: "$[[ inputs.sonar ]]"
+    GIT_DEPTH: '0'
+  needs:
+  - job: "$[[ inputs.job_prefix ]]build"
+    artifacts: true
+  - job: "$[[ inputs.job_prefix ]]test"
+    artifacts: true
+    optional: true
+  script:
+  - export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"
+  - "${HCI_CI_BIN:-ci} sonar"
+  rules:
+  - if: "$HCI_JOB_ENABLED == \"true\""
+  allow_failure:
+    exit_codes:
+    - 78
+"$[[ inputs.job_prefix ]]svace":
+  extends: .$[[ inputs.job_prefix ]]hci-nodejs
+  stage: "$[[ inputs.stage_test ]]"
+  image: "$HCI_SVACE_IMAGE_AUTO"
+  variables:
+    HCI_JOB_ENABLED: "$[[ inputs.svace ]]"
+    GIT_DEPTH: '0'
+  needs: []
+  script:
+  - export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"
+  - "${HCI_CI_BIN:-ci} svace"
+  artifacts:
+    when: always
+    paths:
+    - "$[[ inputs.workdir ]]/hci-artifacts/"
+    expire_in: 1 week
+  rules:
+  - if: "$HCI_JOB_ENABLED == \"true\""
+  allow_failure:
+    exit_codes:
+    - 78
+"$[[ inputs.job_prefix ]]appscreener":
+  extends: .$[[ inputs.job_prefix ]]hci-nodejs
+  stage: "$[[ inputs.stage_test ]]"
+  image: "$[[ inputs.tools_image ]]"
+  tags:
+  - "$[[ inputs.appscreener_runner_tag ]]"
+  variables:
+    HCI_JOB_ENABLED: "$[[ inputs.appscreener ]]"
+  needs: []
+  script:
+  - export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"
+  - "${HCI_CI_BIN:-ci} appscreener"
+  artifacts:
+    when: always
+    paths:
+    - "$[[ inputs.workdir ]]/hci-artifacts/"
+    expire_in: 1 week
+  rules:
+  - if: "$HCI_JOB_ENABLED == \"true\""
+  allow_failure:
+    exit_codes:
+    - 78
+"$[[ inputs.job_prefix ]]image:build":
+  extends: .$[[ inputs.job_prefix ]]hci-nodejs
+  stage: "$[[ inputs.stage_build ]]"
+  image: "$[[ inputs.tools_image ]]"
+  variables:
+    HCI_JOB_ENABLED: "$[[ inputs.image_build ]]"
+  needs:
+  - job: "$[[ inputs.job_prefix ]]build"
+    artifacts: true
+  script:
+  - export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"
+  - "${HCI_CI_BIN:-ci} image:build"
+  artifacts:
+    paths:
+    - "$[[ inputs.workdir ]]/oci-image/"
+    - "$[[ inputs.workdir ]]/hci-artifacts/"
+    expire_in: 1 day
+  rules:
+  - if: "$HCI_JOB_ENABLED == \"true\" && $HCI_SERVICE_TYPE == \"image\""
+"$[[ inputs.job_prefix ]]image:scan":
+  extends: .$[[ inputs.job_prefix ]]hci-nodejs
+  stage: "$[[ inputs.stage_test ]]"
+  image: "$[[ inputs.tools_image ]]"
+  variables:
+    HCI_JOB_ENABLED: "$[[ inputs.image_scan ]]"
+  needs:
+  - job: "$[[ inputs.job_prefix ]]image:build"
+    artifacts: true
+  script:
+  - export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"
+  - "${HCI_CI_BIN:-ci} image:scan"
+  artifacts:
+    when: always
+    paths:
+    - "$[[ inputs.workdir ]]/hci-artifacts/"
+    expire_in: 1 week
+  rules:
+  - if: "$HCI_JOB_ENABLED == \"true\" && $HCI_SERVICE_TYPE == \"image\""
+  allow_failure:
+    exit_codes:
+    - 78
+"$[[ inputs.job_prefix ]]kcs":
+  extends: .$[[ inputs.job_prefix ]]hci-nodejs
+  stage: "$[[ inputs.stage_test ]]"
+  image: "$HCI_KCS_IMAGE_AUTO"
+  tags:
+  - "$[[ inputs.kcs_runner_tag ]]"
+  variables:
+    HCI_JOB_ENABLED: "$[[ inputs.kcs ]]"
+  needs:
+  - job: "$[[ inputs.job_prefix ]]image:build"
+    artifacts: true
+  script:
+  - export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"
+  - "${HCI_CI_BIN:-ci} kcs"
+  artifacts:
+    when: always
+    paths:
+    - "$[[ inputs.workdir ]]/hci-artifacts/"
+    expire_in: 1 week
+  rules:
+  - if: "$HCI_JOB_ENABLED == \"true\" && $HCI_SERVICE_TYPE == \"image\""
+  allow_failure:
+    exit_codes:
+    - 78
+"$[[ inputs.job_prefix ]]image:publish":
+  extends: .$[[ inputs.job_prefix ]]hci-nodejs
+  stage: "$[[ inputs.stage_publish ]]"
+  image: "$[[ inputs.tools_image ]]"
+  interruptible: false
+  variables:
+    HCI_JOB_ENABLED: "$[[ inputs.image_publish ]]"
+  needs:
+  - job: "$[[ inputs.job_prefix ]]image:build"
+    artifacts: true
+  - job: "$[[ inputs.job_prefix ]]image:scan"
+    artifacts: true
+    optional: true
+  script:
+  - export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"
+  - "${HCI_CI_BIN:-ci} image:publish"
+  artifacts:
+    paths:
+    - "$[[ inputs.workdir ]]/hci-artifacts/"
+    expire_in: never
+  rules:
+  - if: "$CI_COMMIT_TAG && $HCI_JOB_ENABLED == \"true\" && $HCI_SERVICE_TYPE == \"image\""
+"$[[ inputs.job_prefix ]]cd:bump":
+  extends: .$[[ inputs.job_prefix ]]hci-nodejs
+  stage: "$[[ inputs.stage_publish ]]"
+  image: "$[[ inputs.tools_image ]]"
+  interruptible: false
+  variables:
+    HCI_JOB_ENABLED: "$[[ inputs.cd_bump ]]"
+  needs:
+  - &id003
+    job: "$[[ inputs.job_prefix ]]image:publish"
+    artifacts: true
+  resource_group: cd-bump
+  script:
+  - export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"
+  - "${HCI_CI_BIN:-ci} cd:bump"
+  artifacts:
+    paths:
+    - "$[[ inputs.workdir ]]/hci-artifacts/"
+    expire_in: never
+  rules:
+  - if: "$CI_COMMIT_TAG && $HCI_JOB_ENABLED == \"true\" && $HCI_SERVICE_TYPE == \"image\""
+"$[[ inputs.job_prefix ]]cd:notify":
+  extends: .$[[ inputs.job_prefix ]]hci-nodejs
+  stage: "$[[ inputs.stage_publish ]]"
+  image: "$[[ inputs.tools_image ]]"
+  interruptible: false
+  variables:
+    HCI_JOB_ENABLED: "$[[ inputs.cd_notify ]]"
+  needs:
+  - job: "$[[ inputs.job_prefix ]]cd:bump"
+    artifacts: false
+    optional: true
+  - *id003
+  script:
+  - export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"
+  - "${HCI_CI_BIN:-ci} cd:notify"
+  rules:
+  - if: "$CI_COMMIT_TAG && $HCI_JOB_ENABLED == \"true\" && $HCI_SERVICE_TYPE == \"image\""
+"$[[ inputs.job_prefix ]]publish":
+  extends: .$[[ inputs.job_prefix ]]hci-nodejs
+  stage: "$[[ inputs.stage_publish ]]"
+  image: "$[[ inputs.build_image ]]"
+  interruptible: false
+  variables:
+    HCI_JOB_ENABLED: "$[[ inputs.publish ]]"
+  needs:
+  - job: "$[[ inputs.job_prefix ]]build"
+    artifacts: true
+  - job: "$[[ inputs.job_prefix ]]test"
+    artifacts: true
+    optional: true
+  script:
+  - export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"
+  - "${HCI_CI_BIN:-ci} publish"
+  artifacts:
+    paths:
+    - "$[[ inputs.workdir ]]/hci-artifacts/"
+    expire_in: never
+  rules:
+  - if: "$CI_COMMIT_TAG && $HCI_JOB_ENABLED == \"true\" && $HCI_SERVICE_TYPE == \"library\""

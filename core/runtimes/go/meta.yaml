@@ -1,0 +1,29 @@
+name: go
+title: Go
+description: Статическая сборка Go-бинарника. Образ — scratch (или заданный HCI_RUNTIME_IMAGE).
+default_version: "125"
+service_types: [image]
+steps: [build, test, lint, image:build, image:scan, image:publish, cd:bump, cd:notify, deps:scan, sonar, svace, appscreener, kcs]
+versions:
+  - id: "122"
+    label: "1.22"
+    build: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/go-1.22:${HCI_IMAGE_FLAVOR}-0.4.0"
+    runtime: scratch
+  - id: "125"
+    label: "1.25"
+    build: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/go-1.25:${HCI_IMAGE_FLAVOR}-0.4.0"
+    runtime: scratch
+images:
+  sonar: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/node.sonar:2.35.0"
+  svace: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/svace:${HCI_IMAGE_FLAVOR}-svace-go-0.7.0"
+ports: [8080, 8443]
+schema:
+  name: Go
+cache:
+  files: [go.sum, go.mod]
+  paths: [.cache/go-build, .cache/gomod]
+artifacts: [app, go.mod, go.sum]
+reports:
+  coverage:
+    format: cobertura
+    path: coverage.out

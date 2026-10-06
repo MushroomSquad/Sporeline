@@ -1,0 +1,13 @@
+# Сборка дополнительных образов платформы (не обёртки рантаймов).
+
+.images:extra:
+  extends: .images:build
+  variables:
+    CONTAINERFILE: images/${IMAGE_NAME}.Containerfile
+    DOCKER_PATH: .
+  parallel:
+    matrix:
+      - IMAGE_NAME: ["gradle.node", "node.sonar", "dotnet-sdk-60-nodejs-16"]
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

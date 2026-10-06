@@ -1,0 +1,41 @@
+name: python
+title: Python
+description: pip, uv, poetry или pdm. Сервис — venv в образе; библиотека — wheel/sdist в pypi-hosted.
+default_version: "312"
+service_types: [image, library]
+steps: [build, test, lint, publish, image:build, image:scan, image:publish, cd:bump, cd:notify, deps:scan, sonar, appscreener, kcs]
+versions:
+  - id: "39"
+    label: "3.9"
+    flavors: [ubi9]
+    build: "${HCI_REGISTRY_OCI_HOST}/ubi9/python-39:1-175"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/ubi9/python-39:1-175"
+  - id: "311"
+    label: "3.11"
+    flavors: [ubi9]
+    build: "${HCI_REGISTRY_OCI_HOST}/ubi9/python-311:1-175"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/ubi9/python-311:1-175"
+  - id: "312"
+    label: "3.12"
+    flavors: [ubi9]
+    build: "${HCI_REGISTRY_OCI_HOST}/ubi9/python-312:1-175"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/ubi9/python-312:1-175"
+  - id: "313"
+    label: "3.13"
+    flavors: [ubi9]
+    build: "${HCI_REGISTRY_OCI_HOST}/ubi9/python-313:1-175"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/ubi9/python-313:1-175"
+images:
+  sonar: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/node.sonar:2.35.0"
+ports: [8000, 8080]
+schema:
+  name: Python
+cache:
+  files: [uv.lock, poetry.lock]
+  paths: [.cache/pip, .venv]
+artifacts: [dist, .venv, requirements.txt, .hci-install.sh]
+reports:
+  junit: [hci-artifacts/pytest.xml]
+  coverage:
+    format: cobertura
+    path: coverage.xml

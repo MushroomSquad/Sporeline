@@ -1,0 +1,5 @@
+runtime: maven
+service_type: image
+image:
+  labels:
+    ru.hyperion.fixture: maven-service

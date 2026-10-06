@@ -1,0 +1,6 @@
+runtime: static
+service_type: image
+e2e:
+  inputs:
+    image_build: false
+    image_scan: false

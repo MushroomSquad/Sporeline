@@ -1,0 +1,20 @@
+name: bun
+title: Bun
+description: Сборка и тесты на Bun. Публикация пакетов через npm registry.
+default_version: "1"
+service_types: [image, library]
+steps: [build, test, lint, publish, image:build, image:scan, image:publish, cd:bump, cd:notify, deps:scan, sonar, appscreener]
+versions:
+  - id: "1"
+    label: "1"
+    build: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/bun:${HCI_IMAGE_FLAVOR}-0.1.0"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/bun:${HCI_IMAGE_FLAVOR}-0.1.0"
+images:
+  sonar: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/node.sonar:2.35.0"
+ports: [3000, 8443]
+schema:
+  name: Bun
+cache:
+  files: [bun.lock, bun.lockb]
+  paths: [.cache/bun, node_modules]
+artifacts: [build, package.json, bun.lock, bun.lockb]

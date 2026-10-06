@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Точка входа CI-независимого ядра сборки. См. `ci help`.
+set -Eeuo pipefail
+
+if [[ -z "${HCI_HOME:-}" ]]; then
+  HCI_HOME="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+fi
+export HCI_HOME
+export PATH="$HCI_HOME/bin:$PATH"
+
+for _hci_lib in "$HCI_HOME"/lib/*.sh; do
+  # shellcheck source=/dev/null
+  source "$_hci_lib"
+done
+unset _hci_lib
+
+dispatch::main "$@"

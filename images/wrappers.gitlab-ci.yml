@@ -1,0 +1,349 @@
+# Сгенерировано tools/generate.py из core/runtimes/*/meta.yaml. Не редактировать вручную.
+images:tools:
+  extends: .images:build
+  variables:
+    CONTAINERFILE: images/tools/Containerfile
+  parallel:
+    matrix:
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/tools:ubi9-1.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-tools:ubi9-1.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/tools:redos73-cert-1.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-tools:redos73-cert-1.7.0-ci1.0.0"
+images:wrappers:
+  extends: .images:build
+  variables:
+    CONTAINERFILE: images/runtimes/Containerfile
+  parallel:
+    matrix:
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/images/scanner:v2.1.1-with-db"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-images-scanner:v2.1.1-with-db-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/node.sonar:2.35.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-node.sonar:2.35.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/bun:ubi9-0.1.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-bun:ubi9-0.1.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/bun:redos73-cert-0.1.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-bun:redos73-cert-0.1.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/ubi8/dotnet-31:3.1-61"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-ubi8-dotnet-31:3.1-61-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/dotnet-sonarqube:31-0.5.2"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-dotnet-sonarqube:31-0.5.2-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/ubi8/dotnet-50:5.0-39"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-ubi8-dotnet-50:5.0-39-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/dotnet-sonarqube:50-0.5.2"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-dotnet-sonarqube:50-0.5.2-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/ubi8/dotnet-60:6.0-56"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-ubi8-dotnet-60:6.0-56-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/dotnet-sonarqube:60-0.5.2"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-dotnet-sonarqube:60-0.5.2-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/ubi8/dotnet-70:7.0-32"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-ubi8-dotnet-70:7.0-32-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/dotnet-sonarqube:70-0.5.2"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-dotnet-sonarqube:70-0.5.2-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/ubi8/dotnet-80:8.0.126-1776736043"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-ubi8-dotnet-80:8.0.126-1776736043-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/dotnet-sonarqube:80-0.5.2"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-dotnet-sonarqube:80-0.5.2-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/ubi8/dotnet-90:9.0.116-1776757991"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-ubi8-dotnet-90:9.0.116-1776757991-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/dotnet-sonarqube:90-0.5.2"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-dotnet-sonarqube:90-0.5.2-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/ubi9/dotnet-100:9.7-1776847136"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-ubi9-dotnet-100:9.7-1776847136-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/dotnet-sonarqube:100-0.5.2"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-dotnet-sonarqube:100-0.5.2-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:ubi9-svace-dotnet-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:ubi9-svace-dotnet-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:redos73-cert-svace-dotnet-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:redos73-cert-svace-dotnet-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/go-1.22:ubi9-0.4.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-go-1.22:ubi9-0.4.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/go-1.22:redos73-cert-0.4.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-go-1.22:redos73-cert-0.4.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/go-1.25:ubi9-0.4.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-go-1.25:ubi9-0.4.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/go-1.25:redos73-cert-0.4.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-go-1.25:redos73-cert-0.4.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:ubi9-svace-go-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:ubi9-svace-go-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:redos73-cert-svace-go-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:redos73-cert-svace-go-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-8-gradle:ubi9-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-8-gradle:ubi9-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-8-gradle:redos73-cert-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-8-gradle:redos73-cert-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:ubi9-svace-gradle-8-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:ubi9-svace-gradle-8-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:redos73-cert-svace-gradle-8-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:redos73-cert-svace-gradle-8-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-11-gradle:ubi9-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-11-gradle:ubi9-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-11-gradle:redos73-cert-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-11-gradle:redos73-cert-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:ubi9-svace-gradle-11-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:ubi9-svace-gradle-11-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:redos73-cert-svace-gradle-11-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:redos73-cert-svace-gradle-11-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-17-gradle:ubi9-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-17-gradle:ubi9-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-17-gradle:redos73-cert-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-17-gradle:redos73-cert-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:ubi9-svace-gradle-17-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:ubi9-svace-gradle-17-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:redos73-cert-svace-gradle-17-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:redos73-cert-svace-gradle-17-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-21-gradle:ubi9-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-21-gradle:ubi9-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-21-gradle:redos73-cert-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-21-gradle:redos73-cert-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:ubi9-svace-gradle-21-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:ubi9-svace-gradle-21-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:redos73-cert-svace-gradle-21-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:redos73-cert-svace-gradle-21-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-25-gradle:ubi9-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-25-gradle:ubi9-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:ubi9-svace-gradle-25-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:ubi9-svace-gradle-25-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-8:ubi9-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-8:ubi9-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-8:redos73-cert-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-8:redos73-cert-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-11:ubi9-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-11:ubi9-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-11:redos73-cert-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-11:redos73-cert-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-17:ubi9-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-17:ubi9-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-17:redos73-cert-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-17:redos73-cert-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-21:ubi9-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-21:ubi9-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-21:redos73-cert-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-21:redos73-cert-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/openjdk-25:ubi9-0.4.4"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-openjdk-25:ubi9-0.4.4-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:ubi9-svace-maven-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:ubi9-svace-maven-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:redos73-cert-svace-maven-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:redos73-cert-svace-maven-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/ubi8/nodejs-10:1-127"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-ubi8-nodejs-10:1-127-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/ubi8/nodejs-12:1-113"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-ubi8-nodejs-12:1-113-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/ubi8/nodejs-14:1-111"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-ubi8-nodejs-14:1-111-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/nodejs-16:ubi9-0.2.2"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-nodejs-16:ubi9-0.2.2-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/nodejs-16:redos73-cert-0.2.2"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-nodejs-16:redos73-cert-0.2.2-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/nodejs-18:ubi9-0.2.2"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-nodejs-18:ubi9-0.2.2-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/nodejs-18:redos73-cert-0.2.2"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-nodejs-18:redos73-cert-0.2.2-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/ubi9/nodejs-20:9.7-1776920053"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-ubi9-nodejs-20:9.7-1776920053-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/ubi9/nodejs-22:9.7-1776920122"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-ubi9-nodejs-22:9.7-1776920122-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:ubi9-svace-nodejs-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:ubi9-svace-nodejs-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/svace:redos73-cert-svace-nodejs-0.7.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-svace:redos73-cert-svace-nodejs-0.7.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/php-73:ubi7-0.0.1"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-php-73:ubi7-0.0.1-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/php-74:ubi8-0.0.1"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-php-74:ubi8-0.0.1-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/php-80:ubi9-0.0.1"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-php-80:ubi9-0.0.1-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/php-80:redos73-cert-0.0.1"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-php-80:redos73-cert-0.0.1-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/php-81:ubi9-0.0.1"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-php-81:ubi9-0.0.1-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/php-81:redos73-cert-0.0.1"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-php-81:redos73-cert-0.0.1-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/php-82:ubi9-0.0.1"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-php-82:ubi9-0.0.1-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/php-82:redos73-cert-0.0.1"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-php-82:redos73-cert-0.0.1-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/php-83:ubi9-0.0.1"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-php-83:ubi9-0.0.1-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/php-83:redos73-cert-0.0.1"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-php-83:redos73-cert-0.0.1-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/ubi9/python-39:1-175"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-ubi9-python-39:1-175-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/ubi9/python-311:1-175"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-ubi9-python-311:1-175-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/ubi9/python-312:1-175"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-ubi9-python-312:1-175-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/ubi9/python-313:1-175"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-ubi9-python-313:1-175-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/rust-1.90:ubi9-0.2.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-rust-1.90:ubi9-0.2.0-ci1.0.0"
+    - BASE:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/rust-1.90:redos73-cert-0.2.0"
+      TARGET:
+      - "$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/ci-rust-1.90:redos73-cert-0.2.0-ci1.0.0"

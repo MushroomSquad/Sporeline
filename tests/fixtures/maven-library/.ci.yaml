@@ -1,0 +1,2 @@
+runtime: maven
+service_type: library

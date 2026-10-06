@@ -1,0 +1,814 @@
+#!/usr/bin/env python3
+"""Генерация производных файлов из core/runtimes/*/meta.yaml.
+
+Создаёт:
+  templates/<runtime>.yml, templates/{image,helm,analyze}.yml  — GitLab CI/CD components
+  templates/<category>-<step>.yml                              — они же по одному джобу (STANDALONE_STEPS)
+  images/wrappers.gitlab-ci.yml                                — сборка образов с ядром (/opt/ci)
+  tests/e2e.gitlab-ci.yml                                      — e2e-матрица по tests/fixtures
+  tests/granular-selfcheck.gitlab-ci.yml                       — проверка валидности гранулярных компонентов
+  schema.yaml                                                  — каталог шаблонов (flow/runtime)
+
+Логика пайплайна (ветки, retry, when, OR/AND) — НЕ здесь.
+Её пишут в YAML проекта (override джобов) / workflow / Jenkinsfile.
+См. docs/pipeline.md.
+
+Запуск:  uv run --with pyyaml tools/generate.py [--check]
+"""
+
+from __future__ import annotations
+
+import argparse
+import difflib
+import re
+import sys
+from pathlib import Path
+
+import yaml
+
+ROOT = Path(__file__).resolve().parent.parent
+CORE = ROOT / "core"
+VERSION = (CORE / "VERSION").read_text().strip()
+FLAVORS = ["ubi9", "redos73-cert"]
+KCS_IMAGE = "${HCI_REGISTRY_OCI_HOST}/images/scanner:v2.1.1-with-db"
+TOOLS_IMAGE = "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/tools:${HCI_IMAGE_FLAVOR}-1.7.0"
+SONAR_SCANNER_IMAGE = "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/node.sonar:2.35.0"
+SOFT_EXIT = 78
+HEADER = "# Сгенерировано tools/generate.py из core/runtimes/*/meta.yaml. Не редактировать вручную.\n"
+
+OPTIONAL_STEPS = {
+    # шаг: (input, по умолчанию, описание)
+    "test": ("test", True, "Модульные тесты"),
+    "lint": ("lint", True, "Линтеры"),
+    "publish": ("publish", True, "Публикация библиотеки (по тегу; переопределите rules в проекте)"),
+    "image:build": ("image_build", True, "Сборка образа"),
+    "image:scan": ("image_scan", True, "Анализ образа Trivy"),
+    "image:publish": ("image_publish", True, "Публикация образа (по тегу; переопределите rules в проекте)"),
+    "deps:scan": ("deps_scan", True, "Анализ зависимостей"),
+    "sonar": ("sonar", False, "SonarQube"),
+    "svace": ("svace", False, "Svace"),
+    "appscreener": ("appscreener", False, "Solar appScreener"),
+    "kcs": ("kcs", False, "Kaspersky Container Security"),
+    "cd:bump": ("cd_bump", False, "Бамп образа в GitOps-манифесте (git commit+push)"),
+    "cd:notify": ("cd_notify", False, "Webhook-триггер GitOps-контроллера (ArgoCD/Flux)"),
+}
+
+
+def inp(name: str) -> str:
+    return f"$[[ inputs.{name} ]]"
+
+
+class Str(str):
+    """Строка, которую YAML выводит в кавычках."""
+
+
+def _str_presenter(dumper, data):
+    style = '"' if isinstance(data, Str) or data == "" or data[:1] in "$*&!%@`" or ": " in data else None
+    if "\n" in data:
+        style = "|"
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data, style=style)
+
+
+class Dumper(yaml.SafeDumper):
+    pass
+
+
+Dumper.add_representer(str, _str_presenter)
+Dumper.add_representer(Str, _str_presenter)
+
+
+def dump(*docs) -> str:
+    out = [yaml.dump(d, Dumper=Dumper, sort_keys=False, allow_unicode=True, width=200) for d in docs]
+    return HEADER + "---\n".join(out)
+
+
+# --- образы -------------------------------------------------------------------
+
+IMAGE_RE = re.compile(r"^\$\{HCI_REGISTRY_OCI_HOST\}/(?P<path>[^:]+):(?P<tag>.+)$")
+
+
+def _split_image(image: str) -> tuple[str, str]:
+    m = IMAGE_RE.match(image)
+    if not m:
+        raise SystemExit(f"Образ должен начинаться с ${{HCI_REGISTRY_OCI_HOST}}/: {image}")
+    path, tag = m["path"], m["tag"]
+    rest = path.replace("${HCI_IMAGES_FOLDER}/", "")
+    if "${" in rest or "${" in tag.replace("${HCI_IMAGE_FLAVOR}", ""):
+        raise SystemExit(f"Допустимы только ${{HCI_IMAGES_FOLDER}} и ${{HCI_IMAGE_FLAVOR}}: {image}")
+    return path, tag
+
+
+def wrapper_name(image: str) -> str:
+    path, _ = _split_image(image)
+    return "ci-" + path.replace("${HCI_IMAGES_FOLDER}/", "").replace("/", "-")
+
+
+def component_image(image: str) -> str:
+    """Ссылка на обёрточный образ (с ядром) внутри компонента."""
+    _, tag = _split_image(image)
+    tag = tag.replace("${HCI_IMAGE_FLAVOR}", inp("image_flavor"))
+    return f"{inp('registry_host')}/{inp('images_folder')}/{wrapper_name(image)}:{tag}-ci{inp('core_version')}"
+
+
+def wrapper_entries(image: str, flavors: list[str]) -> list[dict]:
+    if not image or image in {"scratch", "build"}:
+        return []
+    path, tag = _split_image(image)
+    base_path = path.replace("${HCI_IMAGES_FOLDER}", "$HCI_IMAGES_FOLDER")
+    variants = flavors if "${HCI_IMAGE_FLAVOR}" in tag else [None]
+    out = []
+    for fl in variants:
+        t = tag.replace("${HCI_IMAGE_FLAVOR}", fl) if fl else tag
+        out.append({
+            "BASE": f"$HCI_IMAGES_REGISTRY/{base_path}:{t}",
+            "TARGET": f"$HCI_IMAGES_REGISTRY/$HCI_IMAGES_FOLDER/{wrapper_name(image)}:{t}-ci{VERSION}",
+        })
+    return out
+
+
+# --- meta ----------------------------------------------------------------------
+
+def load_runtimes() -> dict[str, dict]:
+    result = {}
+    for meta in sorted((CORE / "runtimes").glob("*/meta.yaml")):
+        data = yaml.safe_load(meta.read_text())
+        name = meta.parent.name
+        if data.get("name") != name:
+            raise SystemExit(f"{meta}: name должен совпадать с каталогом ({name})")
+        for f in ("title", "steps", "service_types"):
+            if f not in data:
+                raise SystemExit(f"{meta}: нет обязательного поля {f}")
+        unknown = set(data["steps"]) - set(OPTIONAL_STEPS) - {"build"}
+        if unknown:
+            raise SystemExit(f"{meta}: неизвестные шаги {sorted(unknown)}")
+        for v in data.get("versions", []):
+            if not isinstance(v.get("id"), str):
+                raise SystemExit(f"{meta}: id версии должен быть строкой: {v}")
+        if data.get("versions") and data.get("default_version") not in [v["id"] for v in data["versions"]]:
+            raise SystemExit(f"{meta}: default_version не входит в versions")
+        if len(data.get("cache", {}).get("files", [])) > 2:
+            raise SystemExit(f"{meta}: GitLab поддерживает не больше 2 файлов в cache:key:files")
+        result[name] = data
+    return result
+
+
+def image_map(meta: dict, kind: str) -> dict[str, str] | str | None:
+    """Карта id версии -> образ, единый образ или None. 'build' — образ сборки."""
+    per_version = {v["id"]: v[kind] for v in meta.get("versions", []) if kind in v}
+    if per_version:
+        return per_version
+    return meta.get("images", {}).get(kind)
+
+
+# --- компоненты ----------------------------------------------------------------
+
+def wd(path: str) -> str:
+    return f"{inp('workdir')}/{path}"
+
+
+def base_inputs(stages: list[str]) -> dict:
+    inputs = {
+        "job_prefix": {"default": "", "description": "Префикс имён джобов: несколько компонентов в одном пайплайне (монорепозиторий, матрица версий)"},
+        "workdir": {"default": ".", "description": "Каталог проекта относительно корня репозитория"},
+        "strict": {"type": "boolean", "default": True, "description": "false — падение мягких шагов (тесты, линтеры, анализы) не блокирует пайплайн"},
+        "runner_tag": {"default": "$RUNNER_TAG", "description": "Тег раннера"},
+        "registry_host": {"default": "$NEXUS_HOST", "description": "Реестр, из которого берутся образы джобов"},
+        "push_registry_host": {"default": "", "description": "Реестр публикации образов (пусто — REGISTRY_INT_HOST или registry_host)"},
+        "images_folder": {"default": "$DST_STORAGE_FOLDER", "description": "Каталог образов платформы в реестре"},
+        "image_flavor": {"default": "ubi9", "options": FLAVORS, "description": "Базовая ОС образов"},
+        "core_version": {"default": VERSION, "description": "Версия ядра ci (тег обёрточных образов)"},
+        "ci_bin": {"default": "ci", "description": "Команда ядра (для e2e репозитория шаблонов — путь к core/bin/ci)"},
+        "tools_image": {"default": "$HCI_TOOLS_IMAGE_AUTO", "description": "Образ для шагов образа и анализов"},
+    }
+    for s in stages:
+        inputs[f"stage_{s}"] = {"default": {"build": "build", "test": "test", "publish": "deploy"}[s], "description": f"Stage для шагов {s}"}
+    return inputs
+
+
+def step_inputs(steps: list[str]) -> dict:
+    out = {}
+    for s in steps:
+        if s in OPTIONAL_STEPS:
+            name, default, desc = OPTIONAL_STEPS[s]
+            out[name] = {"type": "boolean", "default": default, "description": desc}
+    if "appscreener" in steps:
+        out["appscreener_runner_tag"] = {"default": "$RUNNER_TAG", "description": "Тег раннера для appScreener"}
+    if "kcs" in steps:
+        out["kcs_runner_tag"] = {"default": "hyperion-kcs", "description": "Тег раннера для KCS"}
+    return out
+
+
+def image_inputs() -> dict:
+    return {
+        "image_build_mode": {"default": "auto", "options": ["auto", "base", "dockerfile", "s2i", "cekit"], "description": "Режим сборки образа"},
+        "image_platforms": {"default": "linux/amd64", "description": "Платформы образа через запятую (multi-arch)"},
+        "runtime_image": {"default": "", "description": "Базовый образ приложения (пусто — из meta.yaml для runtime_version)"},
+    }
+
+
+def job_name(step: str) -> str:
+    return f"{inp('job_prefix')}{step}"
+
+
+def need(step: str, artifacts: bool = True, optional: bool = False) -> dict:
+    n = {"job": job_name(step), "artifacts": artifacts}
+    if optional:
+        n["optional"] = True
+    return n
+
+
+def rules(enabled: bool = True, image_only: bool = False, library_only: bool = False, tag_only: bool = False) -> list:
+    """Минимальные дефолтные rules. Любая сложная логика — override в YAML проекта."""
+    cond = []
+    if tag_only:
+        cond.append("$CI_COMMIT_TAG")
+    if enabled:
+        cond.append('$HCI_JOB_ENABLED == "true"')
+    if image_only:
+        cond.append('$HCI_SERVICE_TYPE == "image"')
+    if library_only:
+        cond.append('$HCI_SERVICE_TYPE == "library"')
+    return [{"if": " && ".join(cond)}] if cond else [{"when": "on_success"}]
+
+
+# --- гранулярные (одно-джобовые) компоненты -------------------------------------
+
+# Шаги, для которых дополнительно генерируются самодостаточные templates/<category>-<step>.yml.
+STANDALONE_STEPS = ("build", "test", "lint", "publish", "image:build", "image:scan", "image:publish")
+GRANULAR_COUNT = 67  # 62 рантайма + 3 image + 2 helm; analyze не разбивается
+INPUT_RE = re.compile(r"\$\[\[ inputs\.(\w+) \]\]")
+
+
+def standalone_jobs(category: str, steps: tuple[str, ...], base_job: dict, jobs: dict, inputs: dict) -> list[tuple[str, dict, dict]]:
+    """Самодостаточные одно-джобовые компоненты: список (имя файла без .yml, spec, {джоб: тело}).
+
+    Тело = {**base_job, **job} (variables — по-ключно, джоб побеждает), без extends и
+    HCI_JOB_ENABLED; needs — optional; rules — без тумблеров (HCI_JOB_ENABLED/HCI_SERVICE_TYPE),
+    tag_only сохраняется. spec.inputs — только реально используемые инпуты плюс job_prefix
+    (он в имени джоба, а не в теле).
+    """
+    out = []
+    for step in steps:
+        job = jobs.get(job_name(step))
+        if job is None:
+            continue
+        merged = {**base_job, **{k: v for k, v in job.items() if k != "extends"}}
+        merged["variables"] = {**base_job.get("variables", {}), **job.get("variables", {})}
+        merged["variables"].pop("HCI_JOB_ENABLED", None)
+        if merged.get("needs"):
+            merged["needs"] = [{**n, "optional": True} for n in merged["needs"]]
+        if "rules" in merged:
+            merged["rules"] = rules(enabled=False, tag_only="$CI_COMMIT_TAG" in (merged["rules"][0].get("if") or ""))
+        name = f"{category}-{step.replace(':', '-')}"
+        found = {"job_prefix"} | set(INPUT_RE.findall(yaml.dump(merged, Dumper=Dumper, width=200)))
+        unknown = sorted(found - set(inputs))
+        if unknown:
+            raise SystemExit(f"templates/{name}.yml: необъявленные inputs {unknown} в самодостаточном джобе")
+        spec = {"spec": {"inputs": {k: v for k, v in inputs.items() if k in found}}}
+        out.append((name, spec, {job_name(step): merged}))
+    return out
+
+
+def script(step: str) -> list[str]:
+    return [
+        'export PATH="${HCI_CI_BIN%/*}:/opt/ci/bin:$PATH"',
+        f"${{HCI_CI_BIN:-ci}} {step}",
+    ]
+
+
+def soft(job: dict) -> dict:
+    job["allow_failure"] = {"exit_codes": [SOFT_EXIT]}
+    return job
+
+
+def out_artifacts(paths: list[str] | None = None, when: str | None = None, expire: str | None = "1 week", reports: dict | None = None) -> dict:
+    a: dict = {}
+    if when:
+        a["when"] = when
+    a["paths"] = (paths or []) + [wd("hci-artifacts/")]
+    if reports:
+        a["reports"] = reports
+    if expire:
+        a["expire_in"] = expire
+    return a
+
+
+def image_jobs(base: str, steps: list[str], first_needs: list) -> dict:
+    jobs = {}
+    if "image:build" in steps:
+        jobs[job_name("image:build")] = {
+            "extends": base, "stage": inp("stage_build"), "image": inp("tools_image"),
+            "variables": {"HCI_JOB_ENABLED": inp("image_build")},
+            "needs": first_needs, "script": script("image:build"),
+            "artifacts": out_artifacts([wd("oci-image/")], expire="1 day"),
+            "rules": rules(image_only=True),
+        }
+    if "image:scan" in steps:
+        jobs[job_name("image:scan")] = soft({
+            "extends": base, "stage": inp("stage_test"), "image": inp("tools_image"),
+            "variables": {"HCI_JOB_ENABLED": inp("image_scan")},
+            "needs": [need("image:build")], "script": script("image:scan"),
+            "artifacts": out_artifacts(when="always"),
+            "rules": rules(image_only=True),
+        })
+    if "kcs" in steps:
+        jobs[job_name("kcs")] = soft({
+            "extends": base, "stage": inp("stage_test"), "image": "$HCI_KCS_IMAGE_AUTO",
+            "tags": [inp("kcs_runner_tag")],
+            "variables": {"HCI_JOB_ENABLED": inp("kcs")},
+            "needs": [need("image:build")], "script": script("kcs"),
+            "artifacts": out_artifacts(when="always"),
+            "rules": rules(image_only=True),
+        })
+    if "image:publish" in steps:
+        needs = [need("image:build")]
+        if "image:scan" in steps:
+            needs.append(need("image:scan", optional=True))
+        jobs[job_name("image:publish")] = {
+            "extends": base, "stage": inp("stage_publish"), "image": inp("tools_image"),
+            "interruptible": False,
+            "variables": {"HCI_JOB_ENABLED": inp("image_publish")},
+            "needs": needs, "script": script("image:publish"),
+            "artifacts": out_artifacts(expire="never"),
+            "rules": rules(image_only=True, tag_only=True),
+        }
+    return jobs
+
+
+def cd_jobs(base: str, steps: list[str], image_publish_needs: list) -> dict:
+    jobs = {}
+    if "cd:bump" in steps:
+        jobs[job_name("cd:bump")] = {
+            "extends": base, "stage": inp("stage_publish"), "image": inp("tools_image"),
+            "interruptible": False,
+            "variables": {"HCI_JOB_ENABLED": inp("cd_bump")},
+            "needs": image_publish_needs,
+            "resource_group": "cd-bump",
+            "script": script("cd:bump"),
+            "artifacts": out_artifacts(expire="never"),
+            "rules": rules(image_only=True, tag_only=True),
+        }
+    if "cd:notify" in steps:
+        needs = list(image_publish_needs)
+        if "cd:bump" in steps:
+            needs = [need("cd:bump", artifacts=False, optional=True)] + needs
+        jobs[job_name("cd:notify")] = {
+            "extends": base, "stage": inp("stage_publish"), "image": inp("tools_image"),
+            "interruptible": False,
+            "variables": {"HCI_JOB_ENABLED": inp("cd_notify")},
+            "needs": needs,
+            "script": script("cd:notify"),
+            "rules": rules(image_only=True, tag_only=True),
+        }
+    return jobs
+
+
+def analyze_jobs(base: str, steps: list[str], sonar_image: str, svace_image: str | None, sonar_needs: list) -> dict:
+    jobs = {}
+    if "deps:scan" in steps:
+        jobs[job_name("deps:scan")] = soft({
+            "extends": base, "stage": inp("stage_test"), "image": inp("tools_image"),
+            "variables": {"HCI_JOB_ENABLED": inp("deps_scan")},
+            "needs": [], "script": script("deps:scan"),
+            "artifacts": out_artifacts(when="always"), "rules": rules(),
+        })
+    if "sonar" in steps:
+        jobs[job_name("sonar")] = soft({
+            "extends": base, "stage": inp("stage_test"), "image": sonar_image,
+            "variables": {"HCI_JOB_ENABLED": inp("sonar"), "GIT_DEPTH": "0"},
+            "needs": sonar_needs, "script": script("sonar"), "rules": rules(),
+        })
+    if "svace" in steps and svace_image:
+        jobs[job_name("svace")] = soft({
+            "extends": base, "stage": inp("stage_test"), "image": svace_image,
+            "variables": {"HCI_JOB_ENABLED": inp("svace"), "GIT_DEPTH": "0"},
+            "needs": [], "script": script("svace"),
+            "artifacts": out_artifacts(when="always"), "rules": rules(),
+        })
+    if "appscreener" in steps:
+        jobs[job_name("appscreener")] = soft({
+            "extends": base, "stage": inp("stage_test"), "image": inp("tools_image"),
+            "tags": [inp("appscreener_runner_tag")],
+            "variables": {"HCI_JOB_ENABLED": inp("appscreener")},
+            "needs": [], "script": script("appscreener"),
+            "artifacts": out_artifacts(when="always"), "rules": rules(),
+        })
+    return jobs
+
+
+def common_variables(runtime: str) -> dict:
+    return {
+        "HCI_RUNTIME": runtime,
+        "HCI_STRICT": inp("strict"),
+        "HCI_WORKDIR": inp("workdir"),
+        "HCI_IMAGE_FLAVOR": inp("image_flavor"),
+        "HCI_IMAGES_FOLDER": inp("images_folder"),
+        "HCI_REGISTRY_OCI_PUSH_HOST": inp("push_registry_host"),
+        "HCI_TOOLS_IMAGE_AUTO": component_image(TOOLS_IMAGE),
+        "HCI_KCS_IMAGE_AUTO": component_image(KCS_IMAGE),
+        "HCI_CI_BIN": inp("ci_bin"),
+        "GIT_DEPTH": "1",
+    }
+
+
+def add_image_map(variables: dict, prefix: str, images: dict[str, str] | str) -> str:
+    """Добавляет HCI_<prefix>_IMAGE_<id> и возвращает ссылку для image:."""
+    if isinstance(images, dict):
+        for vid, img in images.items():
+            variables[f"HCI_{prefix}_IMAGE_{vid}"] = component_image(img)
+        variables[f"HCI_{prefix}_IMAGE_AUTO"] = f"$HCI_{prefix}_IMAGE_{inp('runtime_version')}"
+    else:
+        variables[f"HCI_{prefix}_IMAGE_AUTO"] = component_image(images)
+    return f"$HCI_{prefix}_IMAGE_AUTO"
+
+
+def runtime_component(name: str, meta: dict) -> tuple[str, list[tuple[str, dict, dict]]]:
+    steps = meta["steps"]
+    versions = meta.get("versions", [])
+    base = f".{inp('job_prefix')}hci-{name}"
+
+    inputs = base_inputs(["build", "test", "publish"])
+    if versions:
+        inputs["runtime_version"] = {"default": meta["default_version"], "options": [v["id"] for v in versions], "description": "Версия рантайма"}
+    inputs["service_type"] = {"default": meta["service_types"][0], "options": meta["service_types"], "description": "image — сервис с образом, library — библиотека"}
+    if meta.get("profiles"):
+        inputs["profile"] = {"default": "none", "options": ["none"] + meta["profiles"], "description": "Профиль рантайма (none — без профиля)"}
+    inputs["build_image"] = {"default": "$HCI_BUILD_IMAGE_AUTO", "description": "Образ сборки (по умолчанию — для runtime_version)"}
+    if any(s.startswith("image:") for s in steps):
+        inputs.update(image_inputs())
+    inputs.update(step_inputs(steps))
+
+    variables = common_variables(name)
+    variables.update({
+        "HCI_SERVICE_TYPE": inp("service_type"),
+        "HCI_IMAGE_BUILD_MODE": inp("image_build_mode") if "image_build_mode" in inputs else "auto",
+        "HCI_IMAGE_PLATFORMS": inp("image_platforms") if "image_platforms" in inputs else "linux/amd64",
+        "HCI_RUNTIME_IMAGE": inp("runtime_image") if "runtime_image" in inputs else "",
+    })
+    if versions:
+        variables["HCI_RUNTIME_VERSION"] = inp("runtime_version")
+    if meta.get("profiles"):
+        variables["HCI_PROFILE"] = inp("profile")
+    add_image_map(variables, "BUILD", image_map(meta, "build"))
+
+    sonar_cfg = image_map(meta, "sonar") or SONAR_SCANNER_IMAGE
+    sonar_image = inp("build_image") if sonar_cfg == "build" else add_image_map(variables, "SONAR", sonar_cfg)
+    svace_cfg = image_map(meta, "svace")
+    svace_image = add_image_map(variables, "SVACE", svace_cfg) if svace_cfg else None
+
+    cache_cfg = meta.get("cache", {})
+    cache = None
+    if cache_cfg.get("paths"):
+        key = {"prefix": f"{name}-{inp('runtime_version') if versions else 'any'}"}
+        if cache_cfg.get("files"):
+            key["files"] = [wd(f) for f in cache_cfg["files"]]
+        cache = {"key": key, "paths": [wd(p) for p in cache_cfg["paths"]], "policy": "pull"}
+
+    base_job = {"tags": [inp("runner_tag")], "interruptible": True, "variables": variables}
+    if cache:
+        base_job["cache"] = cache
+
+    jobs: dict = {base: base_job}
+    build_artifacts = [wd(p) for p in meta.get("artifacts", [])]
+    jobs[job_name("build")] = {
+        "extends": base, "stage": inp("stage_build"), "image": inp("build_image"),
+        "needs": [], "script": script("build"),
+        **({"cache": {**cache, "policy": "pull-push"}} if cache else {}),
+        "artifacts": out_artifacts(build_artifacts, expire="1 day"),
+    }
+
+    if "test" in steps:
+        reports = {}
+        rep = meta.get("reports", {})
+        if rep.get("junit"):
+            reports["junit"] = [wd(p) for p in rep["junit"]]
+        if rep.get("coverage") and "*" not in rep["coverage"]["path"]:
+            reports["coverage_report"] = {"coverage_format": rep["coverage"]["format"], "path": wd(rep["coverage"]["path"])}
+        jobs[job_name("test")] = soft({
+            "extends": base, "stage": inp("stage_test"), "image": inp("build_image"),
+            "variables": {"HCI_JOB_ENABLED": inp("test")},
+            "needs": [need("build")], "script": script("test"),
+            "artifacts": out_artifacts([wd(p) for p in rep.get("paths", [])], when="always", reports=reports or None),
+            "rules": rules(),
+        })
+    if "lint" in steps:
+        jobs[job_name("lint")] = soft({
+            "extends": base, "stage": inp("stage_test"), "image": inp("build_image"),
+            "variables": {"HCI_JOB_ENABLED": inp("lint")},
+            "needs": [], "script": script("lint"),
+            "artifacts": out_artifacts(when="always"), "rules": rules(),
+        })
+
+    sonar_needs = [need("build")] + ([need("test", optional=True)] if "test" in steps else [])
+    jobs.update(analyze_jobs(base, steps, sonar_image, svace_image, sonar_needs))
+    jobs.update(image_jobs(base, steps, [need("build")]))
+    jobs.update(cd_jobs(base, steps, [need("image:publish")]))
+
+    if "publish" in steps and "library" in meta["service_types"]:
+        needs = [need("build")] + ([need("test", optional=True)] if "test" in steps else [])
+        jobs[job_name("publish")] = {
+            "extends": base, "stage": inp("stage_publish"), "image": inp("build_image"),
+            "interruptible": False,
+            "variables": {"HCI_JOB_ENABLED": inp("publish")},
+            "needs": needs, "script": script("publish"),
+            "artifacts": out_artifacts(expire="never"),
+            "rules": rules(library_only=True, tag_only=True),
+        }
+
+    spec = {"spec": {"description": f"{meta['title']}. {meta.get('description', '')}".strip(), "inputs": inputs}}
+    return dump(spec, jobs), standalone_jobs(name, STANDALONE_STEPS, base_job, jobs, inputs)
+
+
+def image_component() -> tuple[str, list[tuple[str, dict, dict]]]:
+    steps = ["image:build", "image:scan", "image:publish", "deps:scan", "kcs", "cd:bump", "cd:notify"]
+    base = f".{inp('job_prefix')}hci-image"
+    inputs = base_inputs(["build", "test", "publish"])
+    inputs.update(image_inputs())
+    inputs["image_build_mode"]["default"] = "dockerfile"
+    inputs.update(step_inputs(steps))
+    variables = common_variables("none")
+    variables.update({
+        "HCI_SERVICE_TYPE": "image",
+        "HCI_IMAGE_BUILD_MODE": inp("image_build_mode"),
+        "HCI_IMAGE_PLATFORMS": inp("image_platforms"),
+        "HCI_RUNTIME_IMAGE": inp("runtime_image"),
+    })
+    base_job = {"tags": [inp("runner_tag")], "interruptible": True, "variables": variables}
+    jobs: dict = {base: base_job}
+    jobs.update(analyze_jobs(base, steps, "", None, []))
+    jobs.update(image_jobs(base, steps, []))
+    jobs.update(cd_jobs(base, steps, [need("image:publish")]))
+    spec = {"spec": {"description": "Образ из Containerfile/Dockerfile, CEKit или базового образа без сборки приложения.", "inputs": inputs}}
+    return dump(spec, jobs), standalone_jobs("image", STANDALONE_STEPS, base_job, jobs, inputs)
+
+
+def helm_component() -> tuple[str, list[tuple[str, dict, dict]]]:
+    base = f".{inp('job_prefix')}hci-helm"
+    inputs = base_inputs(["test", "publish"])
+    inputs.update({
+        "chart_dir": {"default": ".", "description": "Каталог чарта относительно workdir"},
+        "values": {"default": "values.yaml", "description": "Файлы values для проверки через запятую"},
+        "publish_mode": {"default": "nexus", "options": ["nexus", "oci"], "description": "Куда публиковать чарт"},
+        "lint": {"type": "boolean", "default": True, "description": "helm lint + kubeconform"},
+        "publish": {"type": "boolean", "default": True, "description": "Публикация чарта (по тегу; rules — в проекте)"},
+    })
+    variables = common_variables("none")
+    variables.update({
+        "HCI_HELM_CHART_DIR": inp("chart_dir"),
+        "HCI_HELM_VALUES": inp("values"),
+        "HCI_HELM_PUBLISH_MODE": inp("publish_mode"),
+    })
+    base_job = {"tags": [inp("runner_tag")], "interruptible": True, "image": inp("tools_image"), "variables": variables}
+    jobs = {
+        base: base_job,
+        job_name("helm:lint"): {
+            "extends": base, "stage": inp("stage_test"), "needs": [],
+            "variables": {"HCI_JOB_ENABLED": inp("lint")}, "script": script("helm:lint"), "rules": rules(),
+        },
+        job_name("helm:publish"): {
+            "extends": base, "stage": inp("stage_publish"), "interruptible": False,
+            "needs": [{"job": job_name("helm:lint"), "artifacts": False, "optional": True}],
+            "variables": {"HCI_JOB_ENABLED": inp("publish")}, "script": script("helm:publish"),
+            "artifacts": out_artifacts(expire="never"), "rules": rules(tag_only=True),
+        },
+    }
+    spec = {"spec": {"description": "Helm-чарт: проверка (helm lint, kubeconform) и публикация.", "inputs": inputs}}
+    return dump(spec, jobs), standalone_jobs("helm", ("helm:lint", "helm:publish"), base_job, jobs, inputs)
+
+
+def analyze_component() -> str:
+    steps = ["deps:scan", "sonar", "svace", "appscreener"]
+    base = f".{inp('job_prefix')}hci-analyze"
+    inputs = base_inputs(["test"])
+    inputs.update(step_inputs(steps))
+    inputs["deps_scan"]["default"] = True
+    inputs["sonar_image"] = {"default": "$HCI_SONAR_IMAGE_AUTO", "description": "Образ с sonar-scanner"}
+    inputs["svace_image"] = {"default": "$HCI_SVACE_IMAGE_AUTO", "description": "Образ Svace с инструментами сборки"}
+    inputs["svace_build_cmd"] = {"default": "", "description": "Команда сборки для Svace"}
+    variables = common_variables("none")
+    variables["HCI_SONAR_IMAGE_AUTO"] = component_image(SONAR_SCANNER_IMAGE)
+    variables["HCI_SVACE_IMAGE_AUTO"] = ""
+    variables["HCI_SVACE_BUILD_CMD"] = inp("svace_build_cmd")
+    jobs: dict = {base: {"tags": [inp("runner_tag")], "interruptible": True, "variables": variables}}
+    jobs.update(analyze_jobs(base, steps, inp("sonar_image"), inp("svace_image"), []))
+    spec = {"spec": {"description": "Анализы без сборки: зависимости, SonarQube, Svace, appScreener.", "inputs": inputs}}
+    return dump(spec, jobs)
+
+
+# --- образы с ядром --------------------------------------------------------------
+
+def wrappers(runtimes: dict) -> str:
+    entries: list[dict] = []
+    seen = set()
+
+    def add(image: str, flavors: list[str]):
+        for e in wrapper_entries(image, flavors):
+            if e["TARGET"] not in seen:
+                seen.add(e["TARGET"])
+                entries.append(e)
+
+    add(KCS_IMAGE, FLAVORS)
+    add(SONAR_SCANNER_IMAGE, FLAVORS)
+    for meta in runtimes.values():
+        for v in meta.get("versions", []):
+            fl = v.get("flavors", FLAVORS)
+            for kind in ("build", "sonar", "svace"):
+                if v.get(kind) and v[kind] != "build":
+                    add(v[kind], fl)
+        for kind in ("sonar", "svace"):
+            img = meta.get("images", {}).get(kind)
+            if img and img != "build":
+                add(img, FLAVORS)
+    tools = wrapper_entries(TOOLS_IMAGE, FLAVORS)
+    jobs = {
+        "images:tools": {
+            "extends": ".images:build",
+            "variables": {"CONTAINERFILE": "images/tools/Containerfile"},
+            "parallel": {"matrix": [{"BASE": [e["BASE"]], "TARGET": [e["TARGET"]]} for e in tools]},
+        },
+        "images:wrappers": {
+            "extends": ".images:build",
+            "variables": {"CONTAINERFILE": "images/runtimes/Containerfile"},
+            "parallel": {"matrix": [{"BASE": [e["BASE"]], "TARGET": [e["TARGET"]]} for e in entries]},
+        },
+    }
+    return HEADER + yaml.dump(jobs, Dumper=Dumper, sort_keys=False, allow_unicode=True, width=200)
+
+
+# --- e2e -----------------------------------------------------------------------
+
+def e2e(runtimes: dict, granular_inputs: dict[str, set[str]]) -> str:
+    includes = []
+    for fx in sorted((ROOT / "tests" / "fixtures").iterdir()):
+        cfg_file = fx / ".ci.yaml"
+        if not cfg_file.is_file():
+            continue
+        cfg = yaml.safe_load(cfg_file.read_text()) or {}
+        e2e_cfg = cfg.get("e2e", {})
+        component = e2e_cfg.get("component") or cfg.get("runtime")
+        if not component:
+            raise SystemExit(f"{cfg_file}: нужен runtime или e2e.component")
+        inputs = {
+            "workdir": f"tests/fixtures/{fx.name}",
+            "job_prefix": f"e2e:{fx.name}:",
+            "core_version": "$HCI_E2E_CORE_VERSION",
+            "ci_bin": "$CI_PROJECT_DIR/core/bin/ci",
+            "strict": True,
+        }
+        for s in ("build", "test", "publish"):
+            inputs[f"stage_{s}"] = "e2e"
+        if component in runtimes:
+            inputs["service_type"] = cfg.get("service_type", runtimes[component]["service_types"][0])
+            steps = runtimes[component]["steps"]
+            for off in ("sonar", "svace", "appscreener", "kcs", "image:publish", "image:build", "image:scan", "deps:scan", "publish", "cd:bump", "cd:notify"):
+                if off in steps:
+                    inputs[OPTIONAL_STEPS[off][0]] = False
+        elif component == "image":
+            inputs.update({"kcs": False, "image_publish": False, "image_build": True, "image_scan": False, "deps_scan": False, "cd_bump": False, "cd_notify": False})
+        elif component == "helm":
+            inputs["publish"] = False
+            inputs.pop("stage_build", None)
+        inputs.update(e2e_cfg.get("inputs", {}))
+        includes.append({"component": f"$CI_SERVER_FQDN/$CI_PROJECT_PATH/{component}@$CI_COMMIT_SHA", "inputs": inputs})
+
+    # Гранулярные компоненты: maven-build в одиночку (solo) и maven-build+maven-test (gran).
+    # Инпуты зеркалят бандловый кейс maven-service (сужённые до объявленных в компоненте).
+    # cache:policy pull — чтобы не писать в тот же ключ кэша, что бандловый кейс того же фикстура.
+    overrides: dict = {}
+    for case, comps in (("solo", ["maven-build"]), ("gran", ["maven-build", "maven-test"])):
+        prefix = f"e2e:maven-service:{case}:"
+        want = {
+            "workdir": "tests/fixtures/maven-service",
+            "job_prefix": prefix,
+            "core_version": "$HCI_E2E_CORE_VERSION",
+            "ci_bin": "$CI_PROJECT_DIR/core/bin/ci",
+            "strict": True,
+            "stage_build": "e2e",
+            "stage_test": "e2e",
+            "stage_publish": "e2e",
+            "service_type": "image",
+        }
+        for comp in comps:
+            step = comp.split("-", 1)[1]
+            inputs = {k: v for k, v in want.items() if k in granular_inputs[comp]}
+            includes.append({"component": f"$CI_SERVER_FQDN/$CI_PROJECT_PATH/{comp}@$CI_COMMIT_SHA", "inputs": inputs})
+            overrides[prefix + step] = {"cache": {"policy": "pull"}}
+    return HEADER + yaml.dump({"include": includes, **overrides}, Dumper=Dumper, sort_keys=False, allow_unicode=True, width=200)
+
+
+# --- self-check гранулярных компонентов -------------------------------------------
+
+def selfcheck(granular: list[tuple[str, dict, dict]]) -> str:
+    """Дочерний пайплайн: include всех гранулярных компонентов (джобы выключены) + один реальный джоб.
+
+    Проверяет, что каждый файл валиден как компонент (include резолвится, inputs сходятся).
+    Без selfcheck:ok пайплайн был бы пустым, и GitLab отказался бы его создавать.
+    """
+    includes, jobs = [], {}
+    for name, _spec, gjobs in granular:
+        prefix = f"selfcheck:{name}:"
+        includes.append({"component": f"$CI_SERVER_FQDN/$CI_PROJECT_PATH/{name}@$CI_COMMIT_SHA",
+                         "inputs": {"job_prefix": prefix}})
+        for key in gjobs:
+            jobs[key.replace(inp("job_prefix"), prefix)] = {"rules": [{"when": "never"}]}
+    jobs["selfcheck:ok"] = {"stage": "test", "image": "$TOOLS_IMAGE", "tags": ["$RUNNER_TAG"],
+                            "needs": [], "script": ["true"]}
+    return HEADER + yaml.dump({"include": includes, **jobs}, Dumper=Dumper, sort_keys=False, allow_unicode=True, width=200)
+
+
+# --- schema.yaml ------------------------------------------------------------------
+
+def schema(runtimes: dict) -> str:
+    items = [
+        {"template": {"flow": "image", "fileName": "templates/image.yml", "component": "image", "imageBuildTool": {"name": "Buildah"}}},
+        {"template": {"flow": "image", "fileName": "templates/image.yml", "component": "image", "imageBuildTool": {"name": "CEKit"},
+                      "withDockerfile": False, "inputs": {"image_build_mode": "cekit"}}},
+    ]
+    for name, meta in sorted(runtimes.items(), key=lambda kv: kv[1].get("schema", {}).get("name", kv[0]).lower()):
+        sch = meta.get("schema", {})
+        variants = [(None, sch)] + [(p, {**sch, **meta.get("profile_schema", {}).get(p, {})}) for p in meta.get("profiles", [])]
+        for profile, s in variants:
+            runtime: dict = {"name": s.get("name", meta["title"])}
+            if s.get("versions", True) and meta.get("versions"):
+                runtime["versions"] = [Str(v.get("label", v["id"])) for v in meta["versions"]]
+            if s.get("buildTool"):
+                runtime["buildTool"] = s["buildTool"]
+            for st in meta["service_types"]:
+                flow = "standard" if st == "image" else "library"
+                r = dict(runtime)
+                if st == "image" and meta.get("ports"):
+                    r["portProtocol"] = [{"port": p, "protocol": "TCP"} for p in meta["ports"]]
+                t = {"flow": flow, "fileName": f"templates/{name}.yml", "component": name, "runtime": r}
+                inputs = {"service_type": st}
+                if profile:
+                    inputs["profile"] = profile
+                t["inputs"] = inputs
+                items.append({"template": t})
+    return HEADER + yaml.dump(items, Dumper=Dumper, sort_keys=False, allow_unicode=True, width=200)
+
+
+# --- main ----------------------------------------------------------------------
+
+def outputs() -> dict[Path, str]:
+    runtimes = load_runtimes()
+    files: dict[Path, str] = {}
+    granular: list[tuple[str, dict, dict]] = []
+    for n, m in runtimes.items():
+        files[ROOT / "templates" / f"{n}.yml"], gran = runtime_component(n, m)
+        granular += gran
+    for cat, build in (("image", image_component), ("helm", helm_component)):
+        files[ROOT / "templates" / f"{cat}.yml"], gran = build()
+        granular += gran
+    files[ROOT / "templates" / "analyze.yml"] = analyze_component()
+
+    bundles = set(runtimes) | {"image", "helm", "analyze"}
+    names = [n for n, _, _ in granular]
+    dups = sorted({n for n in names if names.count(n) > 1})
+    if dups:
+        raise SystemExit(f"гранулярные компоненты с одинаковым именем: {dups}")
+    clash = sorted(set(names) & bundles)
+    if clash:
+        raise SystemExit(f"имя гранулярного компонента совпадает с бандлом: {clash}")
+    if len(granular) != GRANULAR_COUNT:
+        raise SystemExit(f"гранулярных компонентов {len(granular)}, ожидалось {GRANULAR_COUNT}: {sorted(names)}")
+    for name, spec, jobs in granular:
+        files[ROOT / "templates" / f"{name}.yml"] = dump(spec, jobs)
+
+    files[ROOT / "images" / "wrappers.gitlab-ci.yml"] = wrappers(runtimes)
+    files[ROOT / "tests" / "e2e.gitlab-ci.yml"] = e2e(runtimes, {n: set(s["spec"]["inputs"]) for n, s, _ in granular})
+    files[ROOT / "tests" / "granular-selfcheck.gitlab-ci.yml"] = selfcheck(granular)
+    files[ROOT / "schema.yaml"] = schema(runtimes)
+    return files
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--check", action="store_true", help="проверить, что файлы актуальны (для CI)")
+    args = parser.parse_args()
+    files = outputs()
+    stale = []
+    orphans = sorted(set((ROOT / "templates").glob("*.yml")) - set(files))
+    if args.check and orphans:
+        print("Лишние файлы (не генерируются), запустите tools/generate.py или удалите: "
+              + ", ".join(str(p.relative_to(ROOT)) for p in orphans), file=sys.stderr)
+        return 1
+    for path, content in files.items():
+        current = path.read_text() if path.exists() else ""
+        if current == content:
+            continue
+        if args.check:
+            stale.append(path)
+            sys.stdout.writelines(difflib.unified_diff(current.splitlines(True), content.splitlines(True),
+                                                       str(path.relative_to(ROOT)), "generated", n=1))
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content)
+            print(f"обновлён {path.relative_to(ROOT)}")
+    if stale:
+        print(f"\nУстарели: {', '.join(str(p.relative_to(ROOT)) for p in stale)}. Запустите tools/generate.py", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

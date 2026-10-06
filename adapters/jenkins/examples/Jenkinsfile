@@ -1,0 +1,21 @@
+// Пример Jenkinsfile приложения.
+// Shared library root = adapters/jenkins (или отдельный repo с vars/).
+@Library('hyperion-ci') _
+
+hciPipeline(
+  runtime: 'maven',
+  runtimeVersion: '21',
+  serviceType: 'image',
+  buildImage: 'registry.example/hyperion/ci-openjdk-21:ubi9-0.4.4-ci1.0.0',
+  toolsImage: 'registry.example/hyperion/ci-tools:ubi9-1.7.0-ci1.0.0',
+  workdir: '.',
+  agentLabel: 'linux',
+  test: true,
+  lint: true,
+  depsScan: true,
+  imageBuild: true,
+  imageScan: true,
+  imagePublish: true,
+  publish: true,
+  sonar: false,
+)

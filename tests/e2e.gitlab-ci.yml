@@ -1,0 +1,200 @@
+# Сгенерировано tools/generate.py из core/runtimes/*/meta.yaml. Не редактировать вручную.
+include:
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/go@$CI_COMMIT_SHA"
+  inputs:
+    workdir: tests/fixtures/go-service
+    job_prefix: 'e2e:go-service:'
+    core_version: "$HCI_E2E_CORE_VERSION"
+    ci_bin: "$CI_PROJECT_DIR/core/bin/ci"
+    strict: true
+    stage_build: e2e
+    stage_test: e2e
+    stage_publish: e2e
+    service_type: image
+    sonar: false
+    svace: false
+    appscreener: false
+    kcs: false
+    image_publish: false
+    image_build: false
+    image_scan: false
+    deps_scan: false
+    cd_bump: false
+    cd_notify: false
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/gradle@$CI_COMMIT_SHA"
+  inputs:
+    workdir: tests/fixtures/gradle-library
+    job_prefix: 'e2e:gradle-library:'
+    core_version: "$HCI_E2E_CORE_VERSION"
+    ci_bin: "$CI_PROJECT_DIR/core/bin/ci"
+    strict: true
+    stage_build: e2e
+    stage_test: e2e
+    stage_publish: e2e
+    service_type: library
+    sonar: false
+    svace: false
+    appscreener: false
+    kcs: false
+    image_publish: false
+    image_build: false
+    image_scan: false
+    deps_scan: false
+    publish: false
+    cd_bump: false
+    cd_notify: false
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/helm@$CI_COMMIT_SHA"
+  inputs:
+    workdir: tests/fixtures/helm-chart
+    job_prefix: 'e2e:helm-chart:'
+    core_version: "$HCI_E2E_CORE_VERSION"
+    ci_bin: "$CI_PROJECT_DIR/core/bin/ci"
+    strict: true
+    stage_test: e2e
+    stage_publish: e2e
+    publish: false
+    chart_dir: .
+    lint: true
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/maven@$CI_COMMIT_SHA"
+  inputs:
+    workdir: tests/fixtures/maven-library
+    job_prefix: 'e2e:maven-library:'
+    core_version: "$HCI_E2E_CORE_VERSION"
+    ci_bin: "$CI_PROJECT_DIR/core/bin/ci"
+    strict: true
+    stage_build: e2e
+    stage_test: e2e
+    stage_publish: e2e
+    service_type: library
+    sonar: false
+    svace: false
+    appscreener: false
+    kcs: false
+    image_publish: false
+    image_build: false
+    image_scan: false
+    deps_scan: false
+    publish: false
+    cd_bump: false
+    cd_notify: false
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/maven@$CI_COMMIT_SHA"
+  inputs:
+    workdir: tests/fixtures/maven-service
+    job_prefix: 'e2e:maven-service:'
+    core_version: "$HCI_E2E_CORE_VERSION"
+    ci_bin: "$CI_PROJECT_DIR/core/bin/ci"
+    strict: true
+    stage_build: e2e
+    stage_test: e2e
+    stage_publish: e2e
+    service_type: image
+    sonar: false
+    svace: false
+    appscreener: false
+    kcs: false
+    image_publish: false
+    image_build: false
+    image_scan: false
+    deps_scan: false
+    publish: false
+    cd_bump: false
+    cd_notify: false
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/nodejs@$CI_COMMIT_SHA"
+  inputs:
+    workdir: tests/fixtures/nodejs-library
+    job_prefix: 'e2e:nodejs-library:'
+    core_version: "$HCI_E2E_CORE_VERSION"
+    ci_bin: "$CI_PROJECT_DIR/core/bin/ci"
+    strict: true
+    stage_build: e2e
+    stage_test: e2e
+    stage_publish: e2e
+    service_type: library
+    sonar: false
+    svace: false
+    appscreener: false
+    kcs: false
+    image_publish: false
+    image_build: false
+    image_scan: false
+    deps_scan: false
+    publish: false
+    cd_bump: false
+    cd_notify: false
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/python@$CI_COMMIT_SHA"
+  inputs:
+    workdir: tests/fixtures/python-library
+    job_prefix: 'e2e:python-library:'
+    core_version: "$HCI_E2E_CORE_VERSION"
+    ci_bin: "$CI_PROJECT_DIR/core/bin/ci"
+    strict: true
+    stage_build: e2e
+    stage_test: e2e
+    stage_publish: e2e
+    service_type: library
+    sonar: false
+    appscreener: false
+    kcs: false
+    image_publish: false
+    image_build: false
+    image_scan: false
+    deps_scan: false
+    publish: false
+    cd_bump: false
+    cd_notify: false
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/static@$CI_COMMIT_SHA"
+  inputs:
+    workdir: tests/fixtures/static-site
+    job_prefix: 'e2e:static-site:'
+    core_version: "$HCI_E2E_CORE_VERSION"
+    ci_bin: "$CI_PROJECT_DIR/core/bin/ci"
+    strict: true
+    stage_build: e2e
+    stage_test: e2e
+    stage_publish: e2e
+    service_type: image
+    sonar: false
+    appscreener: false
+    kcs: false
+    image_publish: false
+    image_build: false
+    image_scan: false
+    deps_scan: false
+    cd_bump: false
+    cd_notify: false
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/maven-build@$CI_COMMIT_SHA"
+  inputs:
+    workdir: tests/fixtures/maven-service
+    job_prefix: 'e2e:maven-service:solo:'
+    core_version: "$HCI_E2E_CORE_VERSION"
+    ci_bin: "$CI_PROJECT_DIR/core/bin/ci"
+    strict: true
+    stage_build: e2e
+    service_type: image
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/maven-build@$CI_COMMIT_SHA"
+  inputs:
+    workdir: tests/fixtures/maven-service
+    job_prefix: 'e2e:maven-service:gran:'
+    core_version: "$HCI_E2E_CORE_VERSION"
+    ci_bin: "$CI_PROJECT_DIR/core/bin/ci"
+    strict: true
+    stage_build: e2e
+    service_type: image
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/maven-test@$CI_COMMIT_SHA"
+  inputs:
+    workdir: tests/fixtures/maven-service
+    job_prefix: 'e2e:maven-service:gran:'
+    core_version: "$HCI_E2E_CORE_VERSION"
+    ci_bin: "$CI_PROJECT_DIR/core/bin/ci"
+    strict: true
+    stage_test: e2e
+    service_type: image
+e2e:maven-service:solo:build:
+  cache:
+    policy: pull
+e2e:maven-service:gran:build:
+  cache:
+    policy: pull
+e2e:maven-service:gran:test:
+  cache:
+    policy: pull

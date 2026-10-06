@@ -1,0 +1,2 @@
+runtime: gradle
+service_type: library

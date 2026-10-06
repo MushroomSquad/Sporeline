@@ -1,0 +1,286 @@
+# Сгенерировано tools/generate.py из core/runtimes/*/meta.yaml. Не редактировать вручную.
+- template:
+    flow: image
+    fileName: templates/image.yml
+    component: image
+    imageBuildTool:
+      name: Buildah
+- template:
+    flow: image
+    fileName: templates/image.yml
+    component: image
+    imageBuildTool:
+      name: CEKit
+    withDockerfile: false
+    inputs:
+      image_build_mode: cekit
+- template:
+    flow: standard
+    fileName: templates/bun.yml
+    component: bun
+    runtime:
+      name: Bun
+      versions: &id001
+      - "1"
+      portProtocol:
+      - port: 3000
+        protocol: TCP
+      - port: 8443
+        protocol: TCP
+    inputs:
+      service_type: image
+- template:
+    flow: library
+    fileName: templates/bun.yml
+    component: bun
+    runtime:
+      name: Bun
+      versions: *id001
+    inputs:
+      service_type: library
+- template:
+    flow: standard
+    fileName: templates/dotnet.yml
+    component: dotnet
+    runtime:
+      name: Dotnet
+      versions: &id002
+      - "3.1"
+      - "5.0"
+      - "6.0"
+      - "7.0"
+      - "8.0"
+      - "9.0"
+      - "10.0"
+      portProtocol:
+      - port: 5000
+        protocol: TCP
+      - port: 5001
+        protocol: TCP
+    inputs:
+      service_type: image
+- template:
+    flow: library
+    fileName: templates/dotnet.yml
+    component: dotnet
+    runtime:
+      name: Dotnet
+      versions: *id002
+    inputs:
+      service_type: library
+- template:
+    flow: standard
+    fileName: templates/go.yml
+    component: go
+    runtime:
+      name: Go
+      versions:
+      - "1.22"
+      - "1.25"
+      portProtocol:
+      - port: 8080
+        protocol: TCP
+      - port: 8443
+        protocol: TCP
+    inputs:
+      service_type: image
+- template:
+    flow: standard
+    fileName: templates/gradle.yml
+    component: gradle
+    runtime:
+      name: JDK
+      versions: &id003
+      - "8"
+      - "11"
+      - "17"
+      - "21"
+      - "25"
+      buildTool: gradle
+      portProtocol:
+      - port: 8080
+        protocol: TCP
+      - port: 8443
+        protocol: TCP
+    inputs:
+      service_type: image
+- template:
+    flow: library
+    fileName: templates/gradle.yml
+    component: gradle
+    runtime:
+      name: JDK
+      versions: *id003
+      buildTool: gradle
+    inputs:
+      service_type: library
+- template:
+    flow: standard
+    fileName: templates/maven.yml
+    component: maven
+    runtime:
+      name: JDK
+      versions: &id004
+      - "8"
+      - "11"
+      - "17"
+      - "21"
+      - "25"
+      buildTool: maven
+      portProtocol:
+      - port: 8080
+        protocol: TCP
+      - port: 8443
+        protocol: TCP
+    inputs:
+      service_type: image
+- template:
+    flow: library
+    fileName: templates/maven.yml
+    component: maven
+    runtime:
+      name: JDK
+      versions: *id004
+      buildTool: maven
+    inputs:
+      service_type: library
+- template:
+    flow: standard
+    fileName: templates/maven.yml
+    component: maven
+    runtime:
+      name: JDK
+      versions: &id005
+      - "8"
+      - "11"
+      - "17"
+      - "21"
+      - "25"
+      buildTool: maven
+      portProtocol:
+      - port: 8080
+        protocol: TCP
+      - port: 8443
+        protocol: TCP
+    inputs:
+      service_type: image
+      profile: quarkus
+- template:
+    flow: library
+    fileName: templates/maven.yml
+    component: maven
+    runtime:
+      name: JDK
+      versions: *id005
+      buildTool: maven
+    inputs:
+      service_type: library
+      profile: quarkus
+- template:
+    flow: standard
+    fileName: templates/nodejs.yml
+    component: nodejs
+    runtime:
+      name: NodeJS
+      versions: &id006
+      - "10"
+      - "12"
+      - "14"
+      - "16"
+      - "18"
+      - "20"
+      - "22"
+      portProtocol:
+      - port: 3000
+        protocol: TCP
+      - port: 8443
+        protocol: TCP
+    inputs:
+      service_type: image
+- template:
+    flow: library
+    fileName: templates/nodejs.yml
+    component: nodejs
+    runtime:
+      name: NodeJS
+      versions: *id006
+    inputs:
+      service_type: library
+- template:
+    flow: standard
+    fileName: templates/php.yml
+    component: php
+    runtime:
+      name: PHP
+      versions:
+      - "7.3"
+      - "7.4"
+      - "8.0"
+      - "8.1"
+      - "8.2"
+      - "8.3"
+      portProtocol:
+      - port: 8080
+        protocol: TCP
+    inputs:
+      service_type: image
+- template:
+    flow: standard
+    fileName: templates/python.yml
+    component: python
+    runtime:
+      name: Python
+      versions: &id007
+      - "3.9"
+      - "3.11"
+      - "3.12"
+      - "3.13"
+      portProtocol:
+      - port: 8000
+        protocol: TCP
+      - port: 8080
+        protocol: TCP
+    inputs:
+      service_type: image
+- template:
+    flow: library
+    fileName: templates/python.yml
+    component: python
+    runtime:
+      name: Python
+      versions: *id007
+    inputs:
+      service_type: library
+- template:
+    flow: standard
+    fileName: templates/rust.yml
+    component: rust
+    runtime:
+      name: Rust
+      versions: &id008
+      - "1.90"
+      portProtocol:
+      - port: 8080
+        protocol: TCP
+    inputs:
+      service_type: image
+- template:
+    flow: library
+    fileName: templates/rust.yml
+    component: rust
+    runtime:
+      name: Rust
+      versions: *id008
+    inputs:
+      service_type: library
+- template:
+    flow: standard
+    fileName: templates/static.yml
+    component: static
+    runtime:
+      name: Static
+      portProtocol:
+      - port: 8080
+        protocol: TCP
+    inputs:
+      service_type: image

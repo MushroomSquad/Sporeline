@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperion.local/schemas/artifacts.v2.json",
+  "title": "Манифест опубликованных артефактов сборки",
+  "type": "object",
+  "required": ["schemaVersion", "pipeline", "artifacts"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "pipeline": {
+      "type": "object",
+      "required": ["ci", "sha", "ref"],
+      "properties": {
+        "ci": { "enum": ["gitlab", "github", "jenkins", "local"] },
+        "id": { "type": "string" },
+        "job": { "type": "string" },
+        "sha": { "type": "string" },
+        "ref": { "type": "string" },
+        "project": { "type": "string" },
+        "created": { "type": "string", "format": "date-time" }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "name", "version", "registry", "purl"],
+        "properties": {
+          "type": { "enum": ["oci", "maven", "npm", "nuget", "pypi", "cargo", "helm", "composer", "generic"] },
+          "name": { "type": "string", "minLength": 1 },
+          "version": { "type": "string", "minLength": 1 },
+          "registry": { "type": "string" },
+          "purl": { "type": "string", "pattern": "^pkg:" },
+          "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+          "tags": { "type": "string", "description": "Дополнительные теги через запятую" },
+          "sbom": { "enum": ["cyclonedx", "none"] },
+          "signed": { "type": "boolean" },
+          "files": { "type": "string", "description": "Опубликованные файлы через запятую" }
+        },
+        "allOf": [
+          { "if": { "properties": { "type": { "const": "oci" } } }, "then": { "required": ["digest"] } }
+        ]
+      }
+    }
+  }
+}

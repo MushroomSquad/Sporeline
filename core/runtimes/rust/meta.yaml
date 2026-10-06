@@ -1,0 +1,20 @@
+name: rust
+title: Rust
+description: Cargo. Сервис — статический бинарник в scratch; библиотека — публикация crate.
+default_version: "190"
+service_types: [image, library]
+steps: [build, test, lint, publish, image:build, image:scan, image:publish, cd:bump, cd:notify, deps:scan, sonar, appscreener, kcs]
+versions:
+  - id: "190"
+    label: "1.90"
+    build: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/rust-1.90:${HCI_IMAGE_FLAVOR}-0.2.0"
+    runtime: scratch
+images:
+  sonar: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/node.sonar:2.35.0"
+ports: [8080]
+schema:
+  name: Rust
+cache:
+  files: [Cargo.lock]
+  paths: [.cache/cargo]
+artifacts: [app, Cargo.toml, Cargo.lock, target/package]

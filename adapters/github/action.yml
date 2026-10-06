@@ -1,0 +1,67 @@
+name: Hyperion CI step
+description: Запускает шаг ядра Hyperion CI (ci <step>). Образ должен содержать /opt/ci или укажите ci-bin.
+author: Hyperion
+
+inputs:
+  step:
+    description: "Шаг ядра: build, test, lint, publish, image:build, image:scan, image:publish, deps:scan, sonar, svace, appscreener, kcs, helm:lint, helm:publish, cd:bump, cd:notify, ..."
+    required: true
+  workdir:
+    description: Каталог проекта относительно корня репозитория
+    required: false
+    default: "."
+  runtime:
+    description: Рантайм (maven, gradle, nodejs, …). Пусто — автоопределение / .ci.yaml
+    required: false
+    default: ""
+  runtime-version:
+    description: Версия рантайма
+    required: false
+    default: ""
+  service-type:
+    description: image или library
+    required: false
+    default: ""
+  profile:
+    description: Профиль рантайма (например quarkus)
+    required: false
+    default: ""
+  strict:
+    description: "false — мягкие шаги не валят job (код 78 → warning)"
+    required: false
+    default: "true"
+  ci-bin:
+    description: Путь к бинарнику ci (по умолчанию ci из PATH / /opt/ci/bin)
+    required: false
+    default: "ci"
+  args:
+    description: "Дополнительные аргументы ci через пробел (--image-build-mode=dockerfile …)"
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: ci ${{ inputs.step }}
+      shell: bash
+      env:
+        HCI_CI_BIN: ${{ inputs.ci-bin }}
+        HCI_WORKDIR: ${{ inputs.workdir }}
+        HCI_RUNTIME: ${{ inputs.runtime }}
+        HCI_RUNTIME_VERSION: ${{ inputs.runtime-version }}
+        HCI_SERVICE_TYPE: ${{ inputs.service-type }}
+        HCI_PROFILE: ${{ inputs.profile }}
+        HCI_STRICT: ${{ inputs.strict }}
+      run: |
+        set -euo pipefail
+        runner="${GITHUB_ACTION_PATH}/run-step.sh"
+        [[ -x "$runner" ]] || runner="${GITHUB_ACTION_PATH}/../common/run-step.sh"
+        chmod +x "$runner" 2>/dev/null || true
+        # Пустые inputs не должны перекрывать .ci.yaml / defaults.
+        unset_if_empty() { [[ -n "${!1}" ]] || unset "$1"; }
+        unset_if_empty HCI_RUNTIME
+        unset_if_empty HCI_RUNTIME_VERSION
+        unset_if_empty HCI_SERVICE_TYPE
+        unset_if_empty HCI_PROFILE
+        # shellcheck disable=SC2086
+        exec "$runner" "${{ inputs.step }}" ${{ inputs.args }}

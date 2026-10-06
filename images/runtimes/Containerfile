@@ -1,0 +1,10 @@
+ARG BASE
+FROM ${BASE}
+
+USER 0
+COPY core /opt/ci
+COPY tools/bin/ /opt/ci/bin/
+ENV PATH="/opt/ci/bin:${PATH}" \
+    HCI_HOME=/opt/ci
+RUN chmod +x /opt/ci/bin/ci && mkdir -p /opt/ci/bin
+USER 1001

@@ -1,0 +1,5 @@
+runtime: nodejs
+service_type: library
+node:
+  ignore_lock: "true"
+

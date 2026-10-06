@@ -1,0 +1,412 @@
+# Сгенерировано tools/generate.py из core/runtimes/*/meta.yaml. Не редактировать вручную.
+include:
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/bun-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:bun-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/bun-test@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:bun-test:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/bun-lint@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:bun-lint:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/bun-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:bun-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/bun-image-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:bun-image-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/bun-image-scan@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:bun-image-scan:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/bun-image-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:bun-image-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/dotnet-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:dotnet-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/dotnet-test@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:dotnet-test:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/dotnet-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:dotnet-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/dotnet-image-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:dotnet-image-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/dotnet-image-scan@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:dotnet-image-scan:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/dotnet-image-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:dotnet-image-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/go-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:go-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/go-test@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:go-test:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/go-lint@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:go-lint:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/go-image-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:go-image-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/go-image-scan@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:go-image-scan:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/go-image-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:go-image-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/gradle-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:gradle-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/gradle-test@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:gradle-test:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/gradle-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:gradle-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/gradle-image-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:gradle-image-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/gradle-image-scan@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:gradle-image-scan:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/gradle-image-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:gradle-image-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/maven-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:maven-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/maven-test@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:maven-test:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/maven-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:maven-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/maven-image-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:maven-image-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/maven-image-scan@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:maven-image-scan:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/maven-image-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:maven-image-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/nodejs-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:nodejs-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/nodejs-test@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:nodejs-test:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/nodejs-lint@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:nodejs-lint:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/nodejs-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:nodejs-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/nodejs-image-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:nodejs-image-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/nodejs-image-scan@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:nodejs-image-scan:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/nodejs-image-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:nodejs-image-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/php-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:php-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/php-test@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:php-test:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/php-image-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:php-image-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/php-image-scan@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:php-image-scan:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/php-image-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:php-image-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/python-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:python-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/python-test@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:python-test:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/python-lint@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:python-lint:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/python-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:python-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/python-image-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:python-image-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/python-image-scan@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:python-image-scan:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/python-image-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:python-image-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/rust-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:rust-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/rust-test@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:rust-test:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/rust-lint@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:rust-lint:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/rust-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:rust-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/rust-image-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:rust-image-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/rust-image-scan@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:rust-image-scan:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/rust-image-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:rust-image-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/static-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:static-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/static-lint@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:static-lint:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/static-image-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:static-image-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/static-image-scan@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:static-image-scan:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/static-image-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:static-image-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/image-image-build@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:image-image-build:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/image-image-scan@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:image-image-scan:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/image-image-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:image-image-publish:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/helm-helm-lint@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:helm-helm-lint:'
+- component: "$CI_SERVER_FQDN/$CI_PROJECT_PATH/helm-helm-publish@$CI_COMMIT_SHA"
+  inputs:
+    job_prefix: 'selfcheck:helm-helm-publish:'
+selfcheck:bun-build:build:
+  rules:
+  - when: never
+selfcheck:bun-test:test:
+  rules:
+  - when: never
+selfcheck:bun-lint:lint:
+  rules:
+  - when: never
+selfcheck:bun-publish:publish:
+  rules:
+  - when: never
+selfcheck:bun-image-build:image:build:
+  rules:
+  - when: never
+selfcheck:bun-image-scan:image:scan:
+  rules:
+  - when: never
+selfcheck:bun-image-publish:image:publish:
+  rules:
+  - when: never
+selfcheck:dotnet-build:build:
+  rules:
+  - when: never
+selfcheck:dotnet-test:test:
+  rules:
+  - when: never
+selfcheck:dotnet-publish:publish:
+  rules:
+  - when: never
+selfcheck:dotnet-image-build:image:build:
+  rules:
+  - when: never
+selfcheck:dotnet-image-scan:image:scan:
+  rules:
+  - when: never
+selfcheck:dotnet-image-publish:image:publish:
+  rules:
+  - when: never
+selfcheck:go-build:build:
+  rules:
+  - when: never
+selfcheck:go-test:test:
+  rules:
+  - when: never
+selfcheck:go-lint:lint:
+  rules:
+  - when: never
+selfcheck:go-image-build:image:build:
+  rules:
+  - when: never
+selfcheck:go-image-scan:image:scan:
+  rules:
+  - when: never
+selfcheck:go-image-publish:image:publish:
+  rules:
+  - when: never
+selfcheck:gradle-build:build:
+  rules:
+  - when: never
+selfcheck:gradle-test:test:
+  rules:
+  - when: never
+selfcheck:gradle-publish:publish:
+  rules:
+  - when: never
+selfcheck:gradle-image-build:image:build:
+  rules:
+  - when: never
+selfcheck:gradle-image-scan:image:scan:
+  rules:
+  - when: never
+selfcheck:gradle-image-publish:image:publish:
+  rules:
+  - when: never
+selfcheck:maven-build:build:
+  rules:
+  - when: never
+selfcheck:maven-test:test:
+  rules:
+  - when: never
+selfcheck:maven-publish:publish:
+  rules:
+  - when: never
+selfcheck:maven-image-build:image:build:
+  rules:
+  - when: never
+selfcheck:maven-image-scan:image:scan:
+  rules:
+  - when: never
+selfcheck:maven-image-publish:image:publish:
+  rules:
+  - when: never
+selfcheck:nodejs-build:build:
+  rules:
+  - when: never
+selfcheck:nodejs-test:test:
+  rules:
+  - when: never
+selfcheck:nodejs-lint:lint:
+  rules:
+  - when: never
+selfcheck:nodejs-publish:publish:
+  rules:
+  - when: never
+selfcheck:nodejs-image-build:image:build:
+  rules:
+  - when: never
+selfcheck:nodejs-image-scan:image:scan:
+  rules:
+  - when: never
+selfcheck:nodejs-image-publish:image:publish:
+  rules:
+  - when: never
+selfcheck:php-build:build:
+  rules:
+  - when: never
+selfcheck:php-test:test:
+  rules:
+  - when: never
+selfcheck:php-image-build:image:build:
+  rules:
+  - when: never
+selfcheck:php-image-scan:image:scan:
+  rules:
+  - when: never
+selfcheck:php-image-publish:image:publish:
+  rules:
+  - when: never
+selfcheck:python-build:build:
+  rules:
+  - when: never
+selfcheck:python-test:test:
+  rules:
+  - when: never
+selfcheck:python-lint:lint:
+  rules:
+  - when: never
+selfcheck:python-publish:publish:
+  rules:
+  - when: never
+selfcheck:python-image-build:image:build:
+  rules:
+  - when: never
+selfcheck:python-image-scan:image:scan:
+  rules:
+  - when: never
+selfcheck:python-image-publish:image:publish:
+  rules:
+  - when: never
+selfcheck:rust-build:build:
+  rules:
+  - when: never
+selfcheck:rust-test:test:
+  rules:
+  - when: never
+selfcheck:rust-lint:lint:
+  rules:
+  - when: never
+selfcheck:rust-publish:publish:
+  rules:
+  - when: never
+selfcheck:rust-image-build:image:build:
+  rules:
+  - when: never
+selfcheck:rust-image-scan:image:scan:
+  rules:
+  - when: never
+selfcheck:rust-image-publish:image:publish:
+  rules:
+  - when: never
+selfcheck:static-build:build:
+  rules:
+  - when: never
+selfcheck:static-lint:lint:
+  rules:
+  - when: never
+selfcheck:static-image-build:image:build:
+  rules:
+  - when: never
+selfcheck:static-image-scan:image:scan:
+  rules:
+  - when: never
+selfcheck:static-image-publish:image:publish:
+  rules:
+  - when: never
+selfcheck:image-image-build:image:build:
+  rules:
+  - when: never
+selfcheck:image-image-scan:image:scan:
+  rules:
+  - when: never
+selfcheck:image-image-publish:image:publish:
+  rules:
+  - when: never
+selfcheck:helm-helm-lint:helm:lint:
+  rules:
+  - when: never
+selfcheck:helm-helm-publish:helm:publish:
+  rules:
+  - when: never
+selfcheck:ok:
+  stage: test
+  image: "$TOOLS_IMAGE"
+  tags:
+  - "$RUNNER_TAG"
+  needs: []
+  script:
+  - 'true'

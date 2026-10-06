@@ -1,0 +1,44 @@
+name: php
+title: PHP
+description: Composer + s2i (ubi php). Тесты — PHPUnit.
+default_version: "83"
+service_types: [image]
+steps: [build, test, image:build, image:scan, image:publish, cd:bump, cd:notify, deps:scan, sonar, appscreener, kcs]
+versions:
+  - id: "73"
+    label: "7.3"
+    flavors: [ubi9]
+    build: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/php-73:ubi7-0.0.1"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/php-73:ubi7-0.0.1"
+  - id: "74"
+    label: "7.4"
+    flavors: [ubi9]
+    build: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/php-74:ubi8-0.0.1"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/php-74:ubi8-0.0.1"
+  - id: "80"
+    label: "8.0"
+    build: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/php-80:${HCI_IMAGE_FLAVOR}-0.0.1"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/php-80:${HCI_IMAGE_FLAVOR}-0.0.1"
+  - id: "81"
+    label: "8.1"
+    build: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/php-81:${HCI_IMAGE_FLAVOR}-0.0.1"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/php-81:${HCI_IMAGE_FLAVOR}-0.0.1"
+  - id: "82"
+    label: "8.2"
+    build: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/php-82:${HCI_IMAGE_FLAVOR}-0.0.1"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/php-82:${HCI_IMAGE_FLAVOR}-0.0.1"
+  - id: "83"
+    label: "8.3"
+    build: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/php-83:${HCI_IMAGE_FLAVOR}-0.0.1"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/php-83:${HCI_IMAGE_FLAVOR}-0.0.1"
+images:
+  sonar: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/node.sonar:2.35.0"
+ports: [8080]
+schema:
+  name: PHP
+cache:
+  files: [composer.lock, composer.json]
+  paths: [.cache/composer]
+artifacts: [composer-build]
+reports:
+  junit: [phpunit-report.xml]

@@ -1,0 +1,58 @@
+name: dotnet
+title: .NET
+description: SDK-стиль csproj. Библиотека — nupkg в nuget-hosted.
+default_version: "100"
+service_types: [image, library]
+steps: [build, test, publish, image:build, image:scan, image:publish, cd:bump, cd:notify, deps:scan, sonar, svace, appscreener, kcs]
+versions:
+  - id: "31"
+    label: "3.1"
+    flavors: [ubi9]
+    build: "${HCI_REGISTRY_OCI_HOST}/ubi8/dotnet-31:3.1-61"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/ubi8/dotnet-31-runtime:3.1-61"
+    sonar: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/dotnet-sonarqube:31-0.5.2"
+  - id: "50"
+    label: "5.0"
+    flavors: [ubi9]
+    build: "${HCI_REGISTRY_OCI_HOST}/ubi8/dotnet-50:5.0-39"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/ubi8/dotnet-50-runtime:5.0-39"
+    sonar: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/dotnet-sonarqube:50-0.5.2"
+  - id: "60"
+    label: "6.0"
+    flavors: [ubi9]
+    build: "${HCI_REGISTRY_OCI_HOST}/ubi8/dotnet-60:6.0-56"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/ubi8/dotnet-60-runtime:6.0-56"
+    sonar: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/dotnet-sonarqube:60-0.5.2"
+  - id: "70"
+    label: "7.0"
+    flavors: [ubi9]
+    build: "${HCI_REGISTRY_OCI_HOST}/ubi8/dotnet-70:7.0-32"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/ubi8/dotnet-70-runtime:7.0-32"
+    sonar: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/dotnet-sonarqube:70-0.5.2"
+  - id: "80"
+    label: "8.0"
+    flavors: [ubi9]
+    build: "${HCI_REGISTRY_OCI_HOST}/ubi8/dotnet-80:8.0.126-1776736043"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/ubi8/dotnet-80-runtime:8.0.26-1776701812"
+    sonar: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/dotnet-sonarqube:80-0.5.2"
+  - id: "90"
+    label: "9.0"
+    flavors: [ubi9]
+    build: "${HCI_REGISTRY_OCI_HOST}/ubi8/dotnet-90:9.0.116-1776757991"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/ubi8/dotnet-90-runtime:9.0.15-1776702168"
+    sonar: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/dotnet-sonarqube:90-0.5.2"
+  - id: "100"
+    label: "10.0"
+    flavors: [ubi9]
+    build: "${HCI_REGISTRY_OCI_HOST}/ubi9/dotnet-100:9.7-1776847136"
+    runtime: "${HCI_REGISTRY_OCI_HOST}/ubi9/dotnet-100-runtime:9.7-1776877745"
+    sonar: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/dotnet-sonarqube:100-0.5.2"
+images:
+  svace: "${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/svace:${HCI_IMAGE_FLAVOR}-svace-dotnet-0.7.0"
+ports: [5000, 5001]
+schema:
+  name: Dotnet
+cache:
+  files: ["*.sln", "nuget.config"]
+  paths: [.cache/nuget]
+artifacts: [publish]
