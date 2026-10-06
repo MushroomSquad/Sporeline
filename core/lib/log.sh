@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Логирование: уровни, сворачиваемые секции, маскирование секретов.
+# Logging: levels, collapsible sections, secret masking.
 
 _HCI_SECRETS=()
 
@@ -30,7 +30,7 @@ log::die() {
   exit 1
 }
 
-# Регистрирует значение как секрет: оно не попадёт в вывод log::* и log::cmd.
+# Registers a value as a secret: it won't appear in log::* or log::cmd output.
 log::mask() {
   local value="$1"
   [[ -n "$value" && ${#value} -ge 4 ]] || return 0
@@ -70,7 +70,7 @@ log::section_end() {
   fi
 }
 
-# Печатает команду (с замаскированными секретами) и выполняет её.
+# Prints the command (with secrets masked) and runs it.
 log::cmd() {
   local rendered
   rendered="$(printf '%q ' "$@")"

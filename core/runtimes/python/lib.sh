@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Python: uv / poetry / pdm / pip. Индекс — Nexus pypi-group с авторизацией в URL.
+# Python: uv / poetry / pdm / pip. Index — a Nexus pypi-group with auth embedded in the URL.
 
 python::pm() {
   case "${HCI_PYTHON_PACKAGE_MANAGER:-auto}" in

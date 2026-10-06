@@ -1,95 +1,95 @@
-# Инструкция для AI-агентов (Claude, Cursor, Codex и другие)
+# Instructions for AI Agents (Claude, Cursor, Codex, and others)
 
-Этот файл следует конвенции [AGENTS.md](https://agents.md) — его читают Codex CLI, Cursor
-и большинство других агентных инструментов. Claude Code дополнительно читает `CLAUDE.md`,
-который указывает сюда же.
+This file follows the [AGENTS.md](https://agents.md) convention — it's read by Codex CLI,
+Cursor, and most other agentic coding tools. Claude Code additionally reads `CLAUDE.md`,
+which points back here.
 
-Перед тем как редактировать код — прочитайте `README.md` (это полный гайд по проекту:
-что/почему/как, по каждому рантайму, по каждой CI-системе) и `docs/DECISIONS.md`
-(история решений — что уже пробовали и почему отклонили). Половина "очевидных улучшений"
-здесь уже была предложена и отвергнута с объяснением — не предлагайте их повторно, не
-прочитав раздел 6 DECISIONS.md.
+Before editing any code, read `README.md` (the full project guide: what/why/how, per
+runtime, per CI system) and `docs/DECISIONS.md` (decision history — what was already
+tried and rejected). Half of the "obvious improvements" here were already proposed and
+rejected with an explanation — don't re-propose them without reading DECISIONS.md
+section 6 first.
 
-## Что это за проект
+## What This Project Is
 
-CI-независимое ядро (`ci <шаг>` на bash) + тонкие адаптеры для GitLab CI/CD Components,
-GitHub Actions и Jenkins. Один и тот же `ci`-бинарник, запечённый в образ, вызывается
-одинаково из всех трёх систем. `tools/generate.py` — dev-time генератор GitLab-компонентов
-из `core/runtimes/*/meta.yaml`, не участвует в выполнении пайплайна.
+A CI-agnostic core (`ci <step>` in bash) + thin adapters for GitLab CI/CD Components,
+GitHub Actions, and Jenkins. The same `ci` binary, baked into an image, is invoked the
+same way from all three systems. `tools/generate.py` is a dev-time generator for GitLab
+components from `core/runtimes/*/meta.yaml` — it takes no part in pipeline execution.
 
-## Жёсткие инварианты — не нарушать без явного запроса пользователя
+## Hard Invariants — Don't Break Without an Explicit User Request
 
-- **Только bash/YAML/Groovy для логики.** Никакого Python (или любого другого языка) как
-  *рантайм-логики* шагов или графа пайплайна. Python допустим только как dev-time генератор
-  (`tools/generate.py`) — он не исполняется в пайплайне пользователя.
-- **`templates/*.yml` не редактируются руками.** Это сгенерированные файлы
-  (`python3 tools/generate.py` из `core/runtimes/*/meta.yaml`). Правьте источник, затем
-  регенерируйте и проверяйте `--check`.
-- **Логика графа (ветки, retry, manual, условия) — в YAML/Groovy потребителя**, не в
-  генераторе и не в `core/`. Ядро реализует только *поведение* шага. Это сознательное
-  архитектурное решение, "конструктор логики" в генераторе уже пробовали и откатили —
-  см. `docs/DECISIONS.md` раздел 6.1.
-- **`core/lib/dispatch.sh` — строка `trap "rm -rf '$HCI_TMP'" EXIT` не трогать.** Попытка
-  расширить её на `INT TERM HUP` была эмпирически проверена (`kill -TERM` на живом
-  процессе) и оказалась регрессией: секреты/SSH-ключи не гарантированно подчищаются при
-  сигнальном завершении джоба. Это касается всех шагов, не только новых.
-- **Секреты никогда не попадают в argv или URL.** Паттерн проекта: `GIT_ASKPASS`-скрипт
-  для HTTPS-токенов (не вшивать в URL), `credential.helper=` сброс перед git-операциями,
-  `curl -K -` (stdin-конфиг) вместо `-H` в argv для Authorization-заголовков. См.
-  `core/steps/cd-bump.sh` и `cd-notify.sh` как образец — там же комментарии "почему",
-  не повторяйте уже исправленные там баги (case-insensitive URL-гейт, askpass dual-prompt
-  contract и т.д.).
+- **Only bash/YAML/Groovy for logic.** No Python (or any other language) as step or
+  pipeline-graph *runtime logic*. Python is allowed only as the dev-time generator
+  (`tools/generate.py`) — it never runs inside a user's pipeline.
+- **`templates/*.yml` is never hand-edited.** These are generated files
+  (`python3 tools/generate.py` from `core/runtimes/*/meta.yaml`). Edit the source, then
+  regenerate and verify with `--check`.
+- **Graph logic (branches, retry, manual, conditions) lives in the consumer's
+  YAML/Groovy**, not in the generator and not in `core/`. The core only implements step
+  *behavior*. This is a deliberate architectural decision — a "logic constructor" in the
+  generator was already tried and rolled back, see `docs/DECISIONS.md` section 6.1.
+- **Do not touch the `trap "rm -rf '$HCI_TMP'" EXIT` line in `core/lib/dispatch.sh`.**
+  An attempt to extend it to `INT TERM HUP` was empirically verified (`kill -TERM` on a
+  live process) to be a regression: secrets/SSH keys aren't reliably cleaned up on
+  signal-based job termination. This affects every step, not just new ones.
+- **Secrets never land in argv or a URL.** The project's pattern: a `GIT_ASKPASS` script
+  for HTTPS tokens (never embed them in the URL), `credential.helper=` reset before git
+  operations, `curl -K -` (stdin config) instead of `-H` in argv for Authorization
+  headers. See `core/steps/cd-bump.sh` and `cd-notify.sh` as the reference — they carry
+  "why" comments right next to the code; don't reintroduce bugs already fixed there
+  (the case-insensitive URL gate, the askpass dual-prompt contract, etc.).
 
-## Обязательная проверка после изменений
+## Required Verification After Changes
 
 ```bash
-# Синтаксис изменённых shell-файлов
-bash -n core/steps/<файл>.sh
+# Syntax of any changed shell file
+bash -n core/steps/<file>.sh
 
-# Юнит-тесты ядра (bats)
+# Core unit tests (bats)
 bats tests/unit/*.bats
-# Интеграционные — если тронули cd:bump/cd:notify или что-то сетевое/git-based
+# Integration tests — if you touched cd:bump/cd:notify or anything network/git-based
 bats tests/integration/*.bats
 
-# Если тронули tools/generate.py или core/runtimes/*/meta.yaml
+# If you touched tools/generate.py or core/runtimes/*/meta.yaml
 uv run --with pyyaml python3 tools/generate.py --check
 uv run --with pyyaml python3 -m unittest discover -s tests/unit -p 'test_*.py'
 ```
 
-`generate.py --check` обязан быть чист перед тем, как считать задачу выполненной, если
-менялся хоть один `meta.yaml` или сам генератор. `templates/*.yml` регенерируются
-(`python3 tools/generate.py` без `--check`), не правятся вручную.
+`generate.py --check` must be clean before considering a task done, if any `meta.yaml` or
+the generator itself was changed. `templates/*.yml` is regenerated
+(`python3 tools/generate.py`, no `--check`), never hand-edited.
 
-## Где что лежит
+## Where Things Live
 
 ```
 core/bin/ci                  # entrypoint
-core/lib/dispatch.sh          # диспетчер шагов, каскад конфигурации
+core/lib/dispatch.sh          # step dispatcher, configuration cascade
 core/lib/*.sh                 # retry, manifest, tls, log, config, ci-env
-core/steps/*.sh                # общие шаги (image-*, sonar, cd-bump, cd-notify, ...)
+core/steps/*.sh                # shared steps (image-*, sonar, cd-bump, cd-notify, ...)
 core/runtimes/<rt>/
-  meta.yaml                     # версии/service_types/steps — источник истины для генератора
-  lib.sh                         # step::build/test/... для рантайма
-templates/*.yml                # GitLab CI/CD Components (генерируются, не редактировать)
-adapters/{gitlab,github,jenkins}/  # тонкие адаптеры, вызывают `ci <step>`
-tools/generate.py              # генератор templates/*.yml + wrappers + schema.yaml + e2e
-tests/unit/*.bats               # юнит-тесты шагов/библиотек (git/сеть замоканы)
-tests/integration/*.bats        # против настоящего git-репозитория (file://)
-docs/pipeline.md                # конструктор логики пайплайна, полные edge cases CD
-docs/DECISIONS.md               # что пробовали и отклонили — читать перед "улучшениями"
+  meta.yaml                     # versions/service_types/steps — source of truth for the generator
+  lib.sh                         # step::build/test/... for the runtime
+templates/*.yml                # GitLab CI/CD Components (generated, never hand-edited)
+adapters/{gitlab,github,jenkins}/  # thin adapters, call `ci <step>`
+tools/generate.py              # generator for templates/*.yml + wrappers + schema.yaml + e2e
+tests/unit/*.bats               # unit tests for steps/libraries (git/network mocked)
+tests/integration/*.bats        # against a real git repository (file://)
+docs/pipeline.md                # pipeline-logic construction, full CD edge cases
+docs/DECISIONS.md               # what was tried and rejected — read before "improving" things
 ```
 
-Полная архитектура, таблица по каждому рантайму и каждой CI-системе — `README.md`.
+The full architecture, plus a table per runtime and per CI system, is in `README.md`.
 
-## Стиль
+## Style
 
-- Комментарии в коде — на русском, только там, где не очевидно "почему" (не "что").
-  Существующий код полон таких комментариев с обоснованием неочевидных решений — это
-  рабочая память проекта, не шум; не удалять их при рефакторинге без причины.
-- Не добавлять зависимости/абстракции сверх необходимого. `jq`/`yq` — уже существующие
-  фундаментальные зависимости ядра (парсинг `.ci.yaml`, манифест артефактов, YAML-правки
-  в `cd:bump`) — не поводу для алармов, но и не прецедент добавлять что-то ещё без
-  необходимости.
-- Перед тем как чинить "очевидный баг" в `core/lib/dispatch.sh`, `core/lib/config.sh`
-  или в security-чувствительных шагах (`cd-bump.sh`, `cd-notify.sh`) — проверьте, не
-  является ли текущее поведение намеренным (ищите комментарий рядом со строкой).
+- Code comments explain non-obvious "why", not "what". The existing code is full of such
+  comments with the rationale for subtle decisions — that's the project's working memory,
+  not noise; don't strip them during a refactor without a reason.
+- Don't add dependencies/abstractions beyond what's needed. `jq`/`yq` are already
+  fundamental core dependencies (parsing `.ci.yaml`, the artifact manifest, YAML edits in
+  `cd:bump`) — not a cause for alarm, but also not a precedent for adding more without
+  need.
+- Before "fixing an obvious bug" in `core/lib/dispatch.sh`, `core/lib/config.sh`, or in
+  security-sensitive steps (`cd-bump.sh`, `cd-notify.sh`) — check whether the current
+  behavior is intentional (look for a comment next to the line).

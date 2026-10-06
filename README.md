@@ -1,102 +1,107 @@
-# Гиперион CI
+English | [Русский](README.ru.md)
 
-CI-независимое ядро (`ci <шаг>` на bash) плюс тонкие адаптеры для GitLab CI/CD Components,
-GitHub Actions и Jenkins shared library. Один и тот же `ci`-бинарник, запечённый в образ
-сборки, вызывается одинаково из всех трёх систем. YAML/Groovy описывают только граф джобов.
+# Hyperion CI
 
-Более узкие детали — в [docs/pipeline.md](docs/pipeline.md) (конструктор логики пайплайна,
-полные edge cases CD) и [docs/DECISIONS.md](docs/DECISIONS.md) (история решений: что
-опробовали и отклонили, и почему).
+A CI-agnostic core (`ci <step>` in bash) plus thin adapters for GitLab CI/CD Components,
+GitHub Actions and Jenkins shared library. The same `ci` binary, baked into the build
+image, is invoked the same way from all three systems. YAML/Groovy only describe the job
+graph.
 
-## Содержание
+Narrower details live in [docs/pipeline.md](docs/pipeline.md) (pipeline-logic construction,
+full CD edge cases) and [docs/DECISIONS.md](docs/DECISIONS.md) (decision history: what was
+tried and rejected, and why).
 
-1. [Что это и почему так устроено](#1-что-это-и-почему-так-устроено)
-2. [Как это работает (архитектура)](#2-как-это-работает-архитектура)
-3. [Три уровня использования — с примерами](#3-три-уровня-использования--с-примерами)
-4. [Каждый рантайм](#4-каждый-рантайм)
-5. [Каждая CI/CD-система](#5-каждая-cicd-система)
-6. [CD: bump и notify — на каждой CI-системе](#6-cd-bump-и-notify--на-каждой-ci-системе)
-7. [Справочник конфигурации](#7-справочник-конфигурации)
+## Contents
 
----
-
-## 1. Что это и почему так устроено
-
-**Что.** CI-независимое ядро (`ci <шаг>` на bash) плюс тонкие адаптеры для
-GitLab CI/CD Components, GitHub Actions и Jenkins shared library. Один и тот же бинарник
-`ci`, запечённый в образ сборки, вызывается одинаково из всех трёх систем.
-
-**Почему не "один большой пайплайн на YAML".** Три повторяющиеся проблемы в типичных
-CI-шаблонах: (1) логика сборки размазана по `script:` блокам и копируется между рантаймами
-с мелкими расхождениями; (2) "конструкторы" пайплайна в generate-скриптах превращаются в
-DSL поверх DSL — пресеты вместо реальной гибкости; (3) смена одной CI-системы на другую
-означает переписывание всей логики с нуля. Решение: вынести *поведение* шага (как собирать,
-тестировать, публиковать) в bash-ядро, а *логику графа* (когда шаг нужен — ветки, retry,
-manual, условия) оставить в нативном языке каждой CI-системы — GitLab YAML, GitHub Actions
-YAML, Jenkins Groovy. Подробное обоснование каждого решения и то, что было опробовано и
-отклонено (полноценный конструктор логики в генераторе, платформенный UI, свободный DSL
-в inputs) — в [docs/DECISIONS.md](docs/DECISIONS.md).
-
-**Как (одним абзацем).** `ci <step>` — диспетчер (`core/bin/ci` → `core/lib/dispatch.sh`),
-который находит `step::<name>` в `core/steps/*.sh` или `core/runtimes/<rt>/lib.sh`,
-собирает конфигурацию по каскаду приоритетов и выполняет шаг. Адаптеры (`templates/*.yml`
-для GitLab, `adapters/github/*`, `adapters/jenkins/*`) — это только граф джобов, вызывающий
-`ci <step>` с нужными переменными. `tools/generate.py` — dev-time генератор GitLab-компонентов
-из `core/runtimes/*/meta.yaml`, чтобы не копипастить почти одинаковые файлы на 10 рантаймов;
-он не участвует в выполнении пайплайна и не содержит логики ветвления.
+1. [What This Is and Why](#1-what-this-is-and-why)
+2. [How It Works (Architecture)](#2-how-it-works-architecture)
+3. [Three Usage Levels — With Examples](#3-three-usage-levels--with-examples)
+4. [Every Runtime](#4-every-runtime)
+5. [Every CI/CD System](#5-every-cicd-system)
+6. [CD: bump and notify — on every CI system](#6-cd-cdbump-and-cdnotify--on-every-ci-system)
+7. [Configuration Reference](#7-configuration-reference)
 
 ---
 
-## 2. Как это работает (архитектура)
+## 1. What This Is and Why
+
+**What.** A CI-agnostic core (`ci <step>` in bash) plus thin adapters for GitLab CI/CD
+Components, GitHub Actions and Jenkins shared library. The same `ci` binary, baked into
+the build image, is invoked the same way from all three systems.
+
+**Why not "one big pipeline in YAML".** Three recurring problems in typical CI templates:
+(1) build logic is smeared across `script:` blocks and copy-pasted between runtimes with
+small drifts; (2) pipeline "constructors" in generator scripts turn into a DSL on top of a
+DSL — presets instead of real flexibility; (3) switching from one CI system to another
+means rewriting all the logic from scratch. The fix: move step *behavior* (how to build,
+test, publish) into a bash core, and keep graph *logic* (when a step runs — branches,
+retry, manual, conditions) in each CI system's native language — GitLab YAML, GitHub
+Actions YAML, Jenkins Groovy. The detailed rationale for each decision, including what was
+tried and rejected (a full logic constructor in the generator, a platform UI, a free-form
+DSL in inputs) — in [docs/DECISIONS.md](docs/DECISIONS.md).
+
+**How (in one paragraph).** `ci <step>` is a dispatcher (`core/bin/ci` → `core/lib/dispatch.sh`)
+that finds `step::<name>` in `core/steps/*.sh` or `core/runtimes/<rt>/lib.sh`, builds the
+configuration from a priority cascade, and runs the step. Adapters (`templates/*.yml` for
+GitLab, `adapters/github/*`, `adapters/jenkins/*`) are nothing but a job graph that calls
+`ci <step>` with the right variables. `tools/generate.py` is a dev-time generator for
+GitLab components from `core/runtimes/*/meta.yaml`, so the ~10 near-identical runtime
+files don't have to be hand-copied; it takes no part in pipeline execution and contains no
+branching logic.
+
+---
+
+## 2. How It Works (Architecture)
 
 ```
 core/
   bin/ci                  # entrypoint: ci <step> [--key=value ...]
-  lib/dispatch.sh          # находит step::<name>, запускает setup рантайма
-  lib/config.sh            # каскад конфигурации, маскирование секретов в логах
-  lib/*.sh                 # retry, manifest, tls, log, ci-env (нормализация платформы)
-  steps/*.sh                # общие шаги: image-build, image-scan, sonar, cd-bump, cd-notify, …
+  lib/dispatch.sh          # finds step::<name>, runs runtime setup
+  lib/config.sh            # configuration cascade, secret masking in logs
+  lib/*.sh                 # retry, manifest, tls, log, ci-env (platform normalization)
+  steps/*.sh                # shared steps: image-build, image-scan, sonar, cd-bump, cd-notify, …
   runtimes/<rt>/
-    meta.yaml               # версии, service_types, steps, cache, reports — источник истины
-    lib.sh                   # step::build / step::test / … для этого рантайма
-    defaults.env             # дефолты, специфичные для рантайма
-  defaults.env              # дефолты ядра
+    meta.yaml               # versions, service_types, steps, cache, reports — source of truth
+    lib.sh                   # step::build / step::test / … for this runtime
+    defaults.env             # runtime-specific defaults
+  defaults.env              # core defaults
 
-templates/*.yml              # GitLab CI/CD Components (генерируются из meta.yaml)
+templates/*.yml              # GitLab CI/CD Components (generated from meta.yaml)
 adapters/
   gitlab/README.md
   github/{action.yml,pipeline.yml}
   jenkins/vars/{hci.groovy,hciPipeline.groovy}
-  common/run-step.sh         # общая soft-exit обёртка (код 78 → warning/unstable)
+  common/run-step.sh         # shared soft-exit wrapper (code 78 → warning/unstable)
 
-tools/generate.py            # генератор templates/*.yml, wrappers, schema.yaml, e2e-матрицы
+tools/generate.py            # generator for templates/*.yml, wrappers, schema.yaml, e2e matrices
 ```
 
-**Каскад конфигурации** (выше — важнее): CLI `--key=value` → переменные окружения →
-`.ci.yaml` проекта → `core/runtimes/<rt>/defaults.env` → `core/defaults.env`.
-Все ключи ядра — в namespace `HCI_*`, чтобы не пересекаться с `CI_*` (GitLab),
+**Configuration cascade** (higher wins): CLI `--key=value` → environment variables →
+the project's `.ci.yaml` → `core/runtimes/<rt>/defaults.env` → `core/defaults.env`.
+Every core key lives in the `HCI_*` namespace to avoid colliding with `CI_*` (GitLab),
 `GITHUB_*`, `JENKINS_*`.
 
-**Коды возврата:** `0` — успех; **78** — мягкий отказ (тест/линтер/скан с `strict=false`):
-GitLab видит `allow_failure: exit_codes: [78]`, Jenkins — `unstable`, GitHub — warning;
-**86** — явный пропуск шага (например, нет исходников для шага).
+**Exit codes:** `0` — success; **78** — soft failure (a test/linter/scan with
+`strict=false`): GitLab sees `allow_failure: exit_codes: [78]`, Jenkins marks it
+`unstable`, GitHub shows a warning; **86** — explicit step skip (e.g. no sources for the
+step).
 
-**Манифест артефактов** — `hci-artifacts/artifacts.json` (схема `core/schema/artifacts.v2.json`),
-пишется только через `manifest::add`, читается шагами вроде `cd:bump` (image digest) и
-проверяется `ci manifest:validate`.
+**Artifact manifest** — `hci-artifacts/artifacts.json` (schema
+`core/schema/artifacts.v2.json`), written only through `manifest::add`, read by steps like
+`cd:bump` (image digest) and checked with `ci manifest:validate`.
 
-**Версия ядра**: тег обёрточного образа сборки совпадает с `core/VERSION` (суффикс
-`-ci1.0.0`) — при апдейте ядра обновляются все образы разом, без ручной синхронизации
-тегов по рантаймам.
+**Core version**: the build wrapper image tag matches `core/VERSION` (suffix `-ci1.0.0`) —
+bumping the core updates every image at once, with no manual per-runtime tag sync.
 
 ---
 
-## 3. Три уровня использования — с примерами
+## 3. Three Usage Levels — With Examples
 
-### Уровень 1 — быстрый старт готовым пайплайном
+### Level 1 — quick start with a ready-made pipeline
 
-Подключить один компонент, выбрать рантайм и `service_type`. Весь граф (build → test →
-image:build → image:scan → image:publish, lint/sonar/deps:scan по вкусу) уже внутри.
+Include one component, pick a runtime and `service_type`. The whole graph (build → test →
+image:build → image:scan → image:publish, lint/sonar/deps:scan to taste) is already
+inside.
 
 ```yaml
 # .gitlab-ci.yml
@@ -107,12 +112,13 @@ include:
       service_type: image
 ```
 
-### Уровень 2 — кастомизация готового пайплайна
+### Level 2 — customizing the ready-made pipeline
 
-Включать/выключать шаги через inputs, передавать параметры поведения через `.ci.yaml` /
-`HCI_*`, переопределять логику графа (`rules`, `needs`, `retry`, `when`) в YAML проекта —
-это **не два разных API**, а два независимых слоя: inputs компонента управляют *составом*
-графа, `rules`/`retry`/`needs` в YAML — *условиями запуска* существующих джобов.
+Toggle steps via inputs, pass behavior parameters via `.ci.yaml` / `HCI_*`, and override
+graph logic (`rules`, `needs`, `retry`, `when`) in the project's YAML — this is **not two
+competing APIs**, but two independent layers: component inputs control the graph's
+*composition*, `rules`/`retry`/`needs` in YAML control the *run conditions* of jobs that
+already exist.
 
 ```yaml
 include:
@@ -120,8 +126,8 @@ include:
     inputs:
       runtime_version: "21"
       service_type: image
-      sonar: true          # добавить шаг в граф
-      publish: false        # убрать шаг из графа
+      sonar: true          # add the step to the graph
+      publish: false        # remove the step from the graph
 
 workflow:
   rules:
@@ -146,14 +152,14 @@ image:publish:
       allow_failure: true
 ```
 
-Поведение самого шага (команда сборки, хуки, реестры) настраивается отдельно, через
-`.ci.yaml` или `HCI_*` — см. [§7](#7-справочник-конфигурации). Это разделение описано
-в [DECISIONS.md §4](docs/DECISIONS.md#4-два-слоя-кастомизации-принято).
+The step's own behavior (build command, hooks, registries) is configured separately, via
+`.ci.yaml` or `HCI_*` — see [§7](#7-configuration-reference). This split is described in
+[DECISIONS.md §4](docs/DECISIONS.md#4-two-customization-layers-accepted).
 
-### Уровень 3 — свой граф из отдельных компонентов
+### Level 3 — a custom graph from individual components
 
-Для нетипичных комбинаций (тест без публикации, несколько тестов с разными параметрами,
-lint в параллель с build) — гранулярные компоненты, по одному джобу на файл:
+For non-typical combinations (test without publish, several tests with different
+parameters, lint in parallel with build) — granular components, one job per file:
 
 ```yaml
 include:
@@ -164,32 +170,33 @@ include:
     inputs:
       runtime_version: "21"
 
-# Зависимости и условия — вручную, одним блоком на джоб
+# Dependencies and conditions — set manually, one block per job
 test:
   needs: [build]
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
 ```
 
-Доступны гранулярно: `build`, `test`, `lint`, `publish`, `image:build`, `image:scan`,
-`image:publish` на каждый рантайм (где применимо). Анализы/сканы (`deps:scan`, `sonar`,
-`svace`, `appscreener`, `kcs`) и `cd:bump`/`cd:notify` остаются только внутри бандлов —
-в уровне 2 они уже переключаются тумблером input, отдельные файлы под них не нужны
-(и были бы лишним расходом дефицитного лимита компонентов на проект GitLab — см. §5).
-Зависимость по цепочке: `image:scan`/`image:publish` требуют `image:build` в том же
-`job_prefix`, иначе `log::die` на старте шага с явной диагностикой.
+Available granularly: `build`, `test`, `lint`, `publish`, `image:build`, `image:scan`,
+`image:publish` for each runtime (where applicable). Analysis/scan steps (`deps:scan`,
+`sonar`, `svace`, `appscreener`, `kcs`) and `cd:bump`/`cd:notify` stay bundle-only — at
+level 2 they're already toggled by an input, so separate files for them aren't needed
+(and would be a wasteful spend of GitLab's scarce per-project component limit — see §5).
+Chained dependency: `image:scan`/`image:publish` require `image:build` in the same
+`job_prefix`, or `log::die` fires at step start with a clear diagnostic.
 
-Эквиваленты для GitHub Actions и Jenkins — в [§5](#5-каждая-cicd-система).
+GitHub Actions and Jenkins equivalents — in [§5](#5-every-cicd-system).
 
 ---
 
-## 4. Каждый рантайм
+## 4. Every Runtime
 
-Общий список шагов на рантайм: `build`, `test` (где есть), `lint` (где есть), `publish`
-(только `service_type: library`), `image:build`/`image:scan`/`image:publish` (только
-`service_type: image`), плюс всегда доступные опциональные `deps:scan`, `sonar`, `svace`,
-`appscreener`, `kcs`, `cd:bump`, `cd:notify` (выключены по умолчанию, кроме `deps:scan`).
-Ниже — то, чем каждый рантайм отличается: версии, `service_type`, особые входы.
+Common step list per runtime: `build`, `test` (where present), `lint` (where present),
+`publish` (only `service_type: library`), `image:build`/`image:scan`/`image:publish`
+(only `service_type: image`), plus the always-available optional `deps:scan`, `sonar`,
+`svace`, `appscreener`, `kcs`, `cd:bump`, `cd:notify` (off by default except
+`deps:scan`). Below is what's different per runtime: versions, `service_type`, special
+inputs.
 
 ### bun
 
@@ -197,8 +204,8 @@ test:
 |---|---|
 | **default_version** | `1` |
 | **service_types** | `image`, `library` |
-| **Особенность** | Публикация пакетов в npm registry при `service_type: library` |
-| **Кэш** | `bun.lock`, `bun.lockb`, `node_modules` |
+| **Notable** | Publishes packages to the npm registry when `service_type: library` |
+| **Cache** | `bun.lock`, `bun.lockb`, `node_modules` |
 
 ```yaml
 # GitLab
@@ -212,9 +219,9 @@ include:
 | | |
 |---|---|
 | **default_version** | `100` (.NET 10.0) |
-| **Доступные версии** | 3.1, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0 |
-| **service_types** | `image`, `library` (nupkg в nuget-hosted) |
-| **Особенность** | Svace-анализ поддержан (`svace: true`) |
+| **Available versions** | 3.1, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0 |
+| **service_types** | `image`, `library` (nupkg to a nuget-hosted repo) |
+| **Notable** | Svace analysis supported (`svace: true`) |
 
 ```yaml
 # GitLab
@@ -228,9 +235,9 @@ include:
 | | |
 |---|---|
 | **default_version** | `125` (1.25) |
-| **Доступные версии** | 1.22, 1.25 |
-| **service_types** | `image` (только; статический бинарник, нет library-публикации) |
-| **Особенность** | Runtime-образ — `scratch` (минимальный, без publish в package registry); отчёт покрытия `cobertura` |
+| **Available versions** | 1.22, 1.25 |
+| **service_types** | `image` only; static binary, no library publish |
+| **Notable** | Runtime image is `scratch` (minimal, no package-registry publish); `cobertura` coverage report |
 
 ```yaml
 # GitLab
@@ -244,9 +251,9 @@ include:
 | | |
 |---|---|
 | **default_version** | `21` |
-| **Доступные версии** | 8, 11, 17, 21, 25 |
+| **Available versions** | 8, 11, 17, 21, 25 |
 | **service_types** | `image`, `library` |
-| **Особенность** | JUnit + Jacoco-отчёты из коробки; `build.gradle`/`gradle.lockfile` в кэше |
+| **Notable** | JUnit + Jacoco reports out of the box; `build.gradle`/`gradle.lockfile` cached |
 
 ```yaml
 # GitLab
@@ -260,18 +267,18 @@ include:
 | | |
 |---|---|
 | **default_version** | `21` |
-| **Доступные версии** | 8, 11, 17, 21, 25 |
+| **Available versions** | 8, 11, 17, 21, 25 |
 | **service_types** | `image`, `library` |
-| **Профили** | `profile: quarkus` — альтернативный build/package flow для Quarkus-проектов |
-| **Особенность** | JUnit (surefire+failsafe) + Jacoco; многомодульные проекты поддержаны |
+| **Profiles** | `profile: quarkus` — alternative build/package flow for Quarkus projects |
+| **Notable** | JUnit (surefire+failsafe) + Jacoco; multi-module projects supported |
 
 ```yaml
-# GitLab — обычный Maven
+# GitLab — plain Maven
 include:
   - component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/maven@1.0.0
     inputs: { runtime_version: "21", service_type: image }
 
-# GitLab — Quarkus-профиль
+# GitLab — Quarkus profile
 include:
   - component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/maven@1.0.0
     inputs: { runtime_version: "21", service_type: image, profile: quarkus }
@@ -282,9 +289,9 @@ include:
 | | |
 |---|---|
 | **default_version** | `22` |
-| **Доступные версии** | 10, 12, 14, 16, 18, 20, 22 |
+| **Available versions** | 10, 12, 14, 16, 18, 20, 22 |
 | **service_types** | `image`, `library` |
-| **Особенность** | npm, yarn или pnpm (corepack) — автоопределение по lock-файлу; скрипты `build`/`test`/`lint` берутся из `package.json` |
+| **Notable** | npm, yarn or pnpm (corepack) — auto-detected from the lockfile; `build`/`test`/`lint` scripts come from `package.json` |
 
 ```yaml
 # GitLab
@@ -298,9 +305,9 @@ include:
 | | |
 |---|---|
 | **default_version** | `83` (8.3) |
-| **Доступные версии** | 7.3, 7.4, 8.0, 8.1, 8.2, 8.3 |
-| **service_types** | `image` (только) |
-| **Особенность** | Composer + s2i (ubi-php); тесты — PHPUnit, нет `lint`/`publish` шагов |
+| **Available versions** | 7.3, 7.4, 8.0, 8.1, 8.2, 8.3 |
+| **service_types** | `image` only |
+| **Notable** | Composer + s2i (ubi-php); tests via PHPUnit, no `lint`/`publish` steps |
 
 ```yaml
 # GitLab
@@ -314,9 +321,9 @@ include:
 | | |
 |---|---|
 | **default_version** | `312` (3.12) |
-| **Доступные версии** | 3.9, 3.11, 3.12, 3.13 |
-| **service_types** | `image`, `library` (wheel/sdist в pypi-hosted) |
-| **Особенность** | pip, uv, poetry или pdm — автоопределение; `service_type: image` упаковывает venv в образ |
+| **Available versions** | 3.9, 3.11, 3.12, 3.13 |
+| **service_types** | `image`, `library` (wheel/sdist to a pypi-hosted repo) |
+| **Notable** | pip, uv, poetry or pdm — auto-detected; `service_type: image` packages a venv into the image |
 
 ```yaml
 # GitLab
@@ -330,8 +337,8 @@ include:
 | | |
 |---|---|
 | **default_version** | `190` (1.90) |
-| **service_types** | `image` (статический бинарник в `scratch`), `library` (публикация crate) |
-| **Особенность** | Cargo; единственная доступная версия тулчейна на сегодня — 1.90 |
+| **service_types** | `image` (static binary in `scratch`), `library` (crate publish) |
+| **Notable** | Cargo; the only toolchain version available today is 1.90 |
 
 ```yaml
 # GitLab
@@ -340,13 +347,13 @@ include:
     inputs: { runtime_version: "190", service_type: image }
 ```
 
-### static (статический сайт)
+### static (static site)
 
 | | |
 |---|---|
 | **default_version** | `126` (nginx 1.26) |
-| **service_types** | `image` (только) |
-| **Особенность** | Сборка фронтенда (npm/yarn/pnpm, если есть `package.json`) и упаковка в nginx-образ через s2i; нет `test`/`publish` шагов. Зафиксирована одна версия (nginx 1.26) — схема помечена `versions: false`, выбор версии пользователю не предлагается |
+| **service_types** | `image` only |
+| **Notable** | Builds the frontend (npm/yarn/pnpm, if `package.json` exists) and packages it into an nginx image via s2i; no `test`/`publish` steps. A single version is pinned (nginx 1.26) — the schema marks `versions: false`, so no version picker is offered |
 
 ```yaml
 # GitLab
@@ -355,19 +362,19 @@ include:
     inputs: { service_type: image }
 ```
 
-### Прочие компоненты (не привязаны к рантайму)
+### Other components (not tied to a runtime)
 
-Три дополнительных GitLab-компонента не относятся ни к одному рантайму — для случаев,
-когда приложение уже собрано вне этого пайплайна или нужен только анализ/Helm:
+Three additional GitLab components aren't tied to any runtime — for cases where the app
+is already built outside this pipeline, or only analysis/Helm is needed:
 
-| Компонент | Назначение |
+| Component | Purpose |
 |---|---|
-| `image` | Образ из готового Containerfile/Dockerfile, CEKit или базового образа — без сборки приложения (`image:build` → `image:scan` → `image:publish`) |
-| `helm` | Helm-чарт: `helm lint` + `kubeconform`, затем публикация в чарт-репозиторий |
-| `analyze` | Анализы без сборки: `deps:scan`, `sonar`, `svace`, `appscreener` — на существующих исходниках |
+| `image` | An image from an existing Containerfile/Dockerfile, CEKit, or a base image — no application build (`image:build` → `image:scan` → `image:publish`) |
+| `helm` | Helm chart: `helm lint` + `kubeconform`, then publish to the chart repository |
+| `analyze` | Analysis without a build: `deps:scan`, `sonar`, `svace`, `appscreener` — on existing sources |
 
 ```yaml
-# GitLab — публикация уже готового образа
+# GitLab — publish an already-built image
 include:
   - component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/image@1.0.0
     inputs: { workdir: . }
@@ -375,21 +382,21 @@ include:
 
 ---
 
-## 5. Каждая CI/CD-система
+## 5. Every CI/CD System
 
-Единый контракт у всех трёх — `ci <step>`. Разница только в том, как система описывает
-граф джобов и логику (ветки/retry/manual).
+All three share one contract — `ci <step>`. The only difference is how each system
+describes the job graph and logic (branches/retry/manual).
 
 ### GitLab CI/CD
 
-Компоненты (`templates/*.yml`), подключаются через `include: component:`.
-Лимит GitLab — максимум ~100 компонентов на проект; поэтому гранулярные компоненты
-покрывают только `build/test/lint/publish/image:*`, а анализы/сканы/CD остаются в бандле
-как input-тумблеры (см. §3, Уровень 3).
+Components (`templates/*.yml`), included via `include: component:`. GitLab's limit is
+~100 components per project; so granular components only cover
+`build/test/lint/publish/image:*`, while analysis/scan/CD steps stay in the bundle as
+input toggles (see §3, Level 3).
 
-**Уровень 1/2** — см. примеры в §3 и §4 (один `include:` на бандл рантайма).
+**Level 1/2** — see the examples in §3 and §4 (one `include:` per runtime bundle).
 
-**Уровень 3 (гранулярно)**:
+**Level 3 (granular)**:
 
 ```yaml
 include:
@@ -405,14 +412,14 @@ test:
       changes: [src/**/*, pom.xml]
 ```
 
-Подробности и полная таблица input-ов — [adapters/gitlab/README.md](adapters/gitlab/README.md).
+Details and the full inputs table — [adapters/gitlab/README.md](adapters/gitlab/README.md).
 
 ### GitHub Actions
 
-Composite action (`adapters/github/action.yml`) на один шаг, либо reusable workflow
-(`pipeline.yml`) на весь граф.
+A composite action (`adapters/github/action.yml`) for a single step, or a reusable
+workflow (`pipeline.yml`) for the whole graph.
 
-**Уровень 1/2 (reusable workflow)**:
+**Level 1/2 (reusable workflow)**:
 
 ```yaml
 name: CI
@@ -436,10 +443,10 @@ jobs:
     secrets: inherit
 ```
 
-Другие условия publish — форкните `pipeline.yml` в свой репозиторий и правьте `if:` как
-обычный Actions YAML (это не отдельный DSL — чистый GitHub Actions).
+For other publish conditions — fork `pipeline.yml` into your repo and edit `if:` like any
+GitHub Actions YAML (it's not a separate DSL — plain GitHub Actions).
 
-**Уровень 3 (гранулярно, через `step:` на composite action)**:
+**Level 3 (granular, via `step:` on the composite action)**:
 
 ```yaml
 jobs:
@@ -459,15 +466,15 @@ jobs:
         with: { runtime: maven, runtime-version: "21", step: test }
 ```
 
-Подробности — [adapters/github/README.md](adapters/github/README.md).
+Details — [adapters/github/README.md](adapters/github/README.md).
 
 ### Jenkins
 
-Shared library: `hci('build')` на один шаг, `hciPipeline(...)` на весь граф. Вся логика
-ветвления — нативный Declarative/Scripted Groovy (`when`, `retry()`, `input`), без
-отдельного DSL.
+Shared library: `hci('build')` for one step, `hciPipeline(...)` for the whole graph. All
+branching logic is native Declarative/Scripted Groovy (`when`, `retry()`, `input`), no
+separate DSL.
 
-**Уровень 1/2 (hciPipeline)**:
+**Level 1/2 (hciPipeline)**:
 
 ```groovy
 @Library('hyperion-ci') _
@@ -481,7 +488,7 @@ hciPipeline(
 )
 ```
 
-**Уровень 3 (гранулярно, прямой вызов `hci()`)**:
+**Level 3 (granular, calling `hci()` directly)**:
 
 ```groovy
 @Library('hyperion-ci') _
@@ -500,24 +507,25 @@ pipeline {
 }
 ```
 
-Код **78** → `unstable` джоб (не красный, не зелёный). Подробности —
+Code **78** → `unstable` job (neither red nor green). Details —
 [adapters/jenkins/README.md](adapters/jenkins/README.md).
 
 ---
 
-## 6. CD: `cd:bump` и `cd:notify` — на каждой CI-системе
+## 6. CD: `cd:bump` and `cd:notify` — on every CI system
 
-Два независимых опциональных шага (по умолчанию выключены) для GitOps-деплоя:
+Two independent optional steps (off by default) for GitOps deployment:
 
-- **`cd:bump`** — клонирует GitOps-репозиторий, правит один YAML-путь (image tag/digest)
-  через `yq`, коммитит и пушит. При конфликте (`non-fast-forward`/`fetch first`) сам
-  перезагружает ветку и переприменяет правку; при сетевой ошибке — просто повторяет push.
-  Жёсткий отказ (не soft-exit 78) — ошибка деплоя не должна молча проглатываться.
-- **`cd:notify`** — шлёт authenticated HTTP-вебхук GitOps-контроллеру (ArgoCD, Flux,
-  произвольный endpoint). Если включены оба шага, `cd:notify` автоматически ждёт
-  `cd:bump` (зависимость `optional: true` — включить только `cd:notify` тоже можно).
+- **`cd:bump`** — clones the GitOps repository, edits a single YAML path (image tag/digest)
+  via `yq`, commits, and pushes. On conflict (`non-fast-forward`/`fetch first`) it
+  reloads the branch and reapplies the edit on its own; on a network error it simply
+  retries the push. Hard failure (not soft-exit 78) — a deploy error must never be
+  silently swallowed.
+- **`cd:notify`** — sends an authenticated HTTP webhook to a GitOps controller (ArgoCD,
+  Flux, any endpoint). If both steps are enabled, `cd:notify` automatically waits for
+  `cd:bump` (an `optional: true` dependency — enabling only `cd:notify` also works).
 
-Оба по умолчанию запускаются только по тегу (как `image:publish`).
+Both run only on a tag by default (like `image:publish`).
 
 ### GitLab
 
@@ -548,11 +556,11 @@ cd:notify:
 
 ### GitHub Actions
 
-`pipeline.yml` (reusable workflow) **не имеет** входов `cd-bump`/`cd-notify` — в отличие
-от GitLab-бандлов, он не заворачивает весь набор опциональных шагов (то же верно для
-`svace`/`appscreener`/`kcs`/`helm:*`). Единственный способ вызвать `cd:bump`/`cd:notify`
-на GitHub — добавить job, напрямую вызывающий composite action с нужным `step:`,
-после job-а из `pipeline.yml`:
+`pipeline.yml` (reusable workflow) **does not have** `cd-bump`/`cd-notify` inputs —
+unlike the GitLab bundles, it doesn't wrap the full set of optional steps (same is true
+for `svace`/`appscreener`/`kcs`/`helm:*`). The only way to call `cd:bump`/`cd:notify` on
+GitHub is to add a job that calls the composite action directly with the right `step:`,
+after the job from `pipeline.yml`:
 
 ```yaml
 jobs:
@@ -595,9 +603,9 @@ jobs:
 
 ### Jenkins
 
-`hciPipeline(...)` тоже не содержит стадий `cd:bump`/`cd:notify` (как и `svace`/
-`appscreener`/`kcs`/`helm:*`) — вызывайте `hci(step: 'cd:bump')` напрямую в своём
-Jenkinsfile, за стадией `image:publish`:
+`hciPipeline(...)` also has no `cd:bump`/`cd:notify` stages (same for
+`svace`/`appscreener`/`kcs`/`helm:*`) — call `hci(step: 'cd:bump')` directly in your own
+Jenkinsfile, after the `image:publish` stage:
 
 ```groovy
 @Library('hyperion-ci') _
@@ -627,72 +635,72 @@ pipeline {
 }
 ```
 
-### Общие замечания (все три системы)
+### General notes (all three systems)
 
-- **HTTPS-токен**: укажите платформенный username в `HCI_CD_GIT_USER` —
-  GitLab: `oauth2` (дефолт), GitHub App: `x-access-token`, Bitbucket Cloud: `x-token-auth`.
-- **SSH-ключ**: `HCI_CD_GIT_SSH_KEY`/`HCI_CD_GIT_SSH_KNOWN_HOSTS` принимают путь к файлу
-  или содержимое. В GitLab — объявляйте как **File**-тип переменной, не Masked
-  (многострочные значения не маскируются).
-- **Многодокументные YAML** (несколько `---`-манифестов в одном файле — Argo/Flux):
-  `HCI_CD_YAML_PATH` обязан быть защищён `select()`:
+- **HTTPS token**: set the platform username in `HCI_CD_GIT_USER` —
+  GitLab: `oauth2` (default), GitHub App: `x-access-token`, Bitbucket Cloud: `x-token-auth`.
+- **SSH key**: `HCI_CD_GIT_SSH_KEY`/`HCI_CD_GIT_SSH_KNOWN_HOSTS` accept a file path or raw
+  content. In GitLab, declare them as a **File**-type variable, not Masked (multi-line
+  values can't be masked).
+- **Multi-document YAML** (several `---`-separated manifests in one file — common for
+  Argo/Flux): `HCI_CD_YAML_PATH` must be guarded with `select()`:
   `(select(.kind=="Deployment").spec.template.spec.containers[0].image)`.
-- **Секрет в URL вебхука**: не кладите `?token=...` в `HCI_CD_NOTIFY_URL` (эта переменная
-  не маскируется — GitLab-маскирование отклоняет значения со `/`). Используйте
-  `HCI_CD_NOTIFY_TOKEN`, он уходит как `Authorization: Bearer <токен>`.
-- **kustomize не поддержан** — только прямая правка YAML-пути через `yq`. Типичный случай
-  (`image:` в Deployment/values.yaml) полностью покрыт; `kustomize` потребовал бы отдельного
-  бинаря в tools-образе — вне объёма текущей версии.
+- **Secret in the webhook URL**: don't put `?token=...` in `HCI_CD_NOTIFY_URL` (this
+  variable isn't masked — GitLab masking rejects values containing `/`). Use
+  `HCI_CD_NOTIFY_TOKEN` instead, it's sent as `Authorization: Bearer <token>`.
+- **kustomize is not supported** — only direct YAML-path edits via `yq`. The typical case
+  (`image:` in a Deployment/values.yaml) is fully covered; `kustomize` would need its own
+  binary in the tools image — out of scope for this version.
 
-Полная документация CD (edge cases, troubleshooting) —
-[docs/pipeline.md §CD](docs/pipeline.md#cd-cdbump-и-cdnotify).
+Full CD documentation (edge cases, troubleshooting) —
+[docs/pipeline.md §CD](docs/pipeline.md#cd-cdbump-and-cdnotify).
 
 ---
 
-## 7. Справочник конфигурации
+## 7. Configuration Reference
 
-### Все шаги (`ci help`)
+### All steps (`ci help`)
 
-| Шаг | Назначение | Soft-exit (78) при `strict: false` |
+| Step | Purpose | Soft-exit (78) at `strict: false` |
 |-----|-----------|:---:|
-| `build` | сборка (+ упаковка библиотеки при `service_type: library`) | — |
-| `test` | модульные тесты с покрытием | ✅ |
-| `lint` | линтеры | ✅ |
-| `publish` | публикация библиотеки в реестр пакетов | — |
-| `image:build` | сборка образа (`base`/`dockerfile`/`s2i`/`cekit`) | — |
-| `image:scan` | анализ образа (Trivy) + SBOM | ✅ |
-| `image:publish` | публикация, подпись, аттестация образа | — |
-| `sbom` | SBOM образа отдельно | — |
-| `deps:scan` | анализ зависимостей (Trivy fs) | ✅ |
+| `build` | build (+ package a library when `service_type: library`) | — |
+| `test` | unit tests with coverage | ✅ |
+| `lint` | linters | ✅ |
+| `publish` | publish a library to a package registry | — |
+| `image:build` | build the image (`base`/`dockerfile`/`s2i`/`cekit`) | — |
+| `image:scan` | image analysis (Trivy) + SBOM | ✅ |
+| `image:publish` | publish, sign, attest the image | — |
+| `sbom` | image SBOM on its own | — |
+| `deps:scan` | dependency analysis (Trivy fs) | ✅ |
 | `sonar` | SonarQube | ✅ |
 | `svace` | Svace | ✅ |
 | `appscreener` | Solar appScreener | ✅ |
 | `kcs` | Kaspersky Container Security | ✅ |
-| `helm:lint` | проверка Helm-чарта | — |
-| `helm:publish` | публикация Helm-чарта | — |
-| `cd:bump` | бамп image-ref в GitOps-манифесте (git commit+push) | — (hard-fail) |
-| `cd:notify` | webhook-триггер GitOps-контроллера | — (hard-fail) |
+| `helm:lint` | Helm chart check | — |
+| `helm:publish` | publish the Helm chart | — |
+| `cd:bump` | bump the image ref in the GitOps manifest (git commit+push) | — (hard fail) |
+| `cd:notify` | webhook trigger for the GitOps controller | — (hard fail) |
 
-Служебные: `config` (итоговая конфигурация с маскированными секретами), `detect`
-(определить рантайм/инструменты), `images` (образы build/runtime для текущего рантайма),
-`manifest:validate`, `run -- <команда>` (выполнить произвольную команду в окружении
-рантайма), `version`.
+Service commands: `config` (final configuration with secrets masked), `detect` (detect
+the runtime/tools), `images` (build/runtime images for the current runtime),
+`manifest:validate`, `run -- <command>` (run an arbitrary command inside the runtime
+environment), `version`.
 
-### Каскад конфигурации
+### Configuration cascade
 
 1. CLI: `ci build --runtime-version=21`
-2. Переменные окружения: `HCI_RUNTIME_VERSION=21`
-3. `.ci.yaml` проекта
+2. Environment variables: `HCI_RUNTIME_VERSION=21`
+3. The project's `.ci.yaml`
 4. `core/runtimes/<rt>/defaults.env`
 5. `core/defaults.env`
 
-### `.ci.yaml` — пример
+### `.ci.yaml` — example
 
 ```yaml
 runtime: maven
 service_type: image
 runtime_version: "21"
-profile: none          # quarkus для Maven
+profile: none          # quarkus for Maven
 strict: true
 image:
   build_mode: auto      # auto | base | dockerfile | s2i | cekit
@@ -700,107 +708,108 @@ image:
   context: target/*.jar
   labels: { team: payments }
 build:
-  cmd: mvn -q package   # полная замена шага
+  cmd: mvn -q package   # full step replacement
 env:
   MAVEN_OPTS: "-Xmx1g"
 ```
 
-Выключить шаг: `HCI_TEST_ENABLED=false` или input `test: false`.
-Строгость: `HCI_STRICT` (глобально) и `HCI_TEST_STRICT` (точечно).
+Disable a step: `HCI_TEST_ENABLED=false` or the `test: false` input.
+Strictness: `HCI_STRICT` (globally) and `HCI_TEST_STRICT` (per step).
 
-### Своя команда шага (`HCI_<ШАГ>_CMD`) — полная замена под нестандартную сборку
+### Custom step command (`HCI_<STEP>_CMD`) — a full replacement for non-standard builds
 
-Для любого шага есть переменная `HCI_<ШАГ>_CMD` (имя шага в верхнем регистре, `:`/`-` → `_`:
+Every step has an `HCI_<STEP>_CMD` variable (step name upper-cased, `:`/`-` → `_`:
 `build` → `HCI_BUILD_CMD`, `image:build` → `HCI_IMAGE_BUILD_CMD`, `deps:scan` →
-`HCI_DEPS_SCAN_CMD`). Если она задана, диспетчер (`core/lib/dispatch.sh`) не вызывает
-встроенную реализацию рантайма — вместо неё выполняется `eval` над значением переменной:
-инлайн-команда, `&&`-цепочка или путь к своему скрипту.
+`HCI_DEPS_SCAN_CMD`). If it's set, the dispatcher (`core/lib/dispatch.sh`) does not call
+the runtime's built-in implementation — instead it runs `eval` on the variable's value:
+an inline command, an `&&` chain, or a path to your own script.
 
 ```yaml
-# .ci.yaml — build.cmd автоматически превращается в HCI_BUILD_CMD
+# .ci.yaml — build.cmd is automatically turned into HCI_BUILD_CMD
 build:
   cmd: ./ci/my-weird-build.sh --target=embedded
 ```
 
-Что при этом сохраняется:
+What's preserved regardless:
 
-- **Setup рантайма всё равно отрабатывает** — для шагов из `HCI_SETUP_STEPS` (`build`,
-  `test`, `lint`, `publish`, `sonar`, `svace`) окружение (реестры, кэши, toolchain из
-  образа) настраивается ДО вашей команды — в своём скрипте используется уже готовое
-  окружение, а не собирается с нуля.
-- **Код возврата трактуется так же**, как у встроенной логики: мягкие шаги (`test`,
-  `lint`, `image:scan`, `deps:scan`, `sonar`, `svace`, `appscreener`, `kcs`) при
-  `strict: false` дают soft-exit 78 вместо провала пайплайна, даже если команда своя.
+- **Runtime setup still runs** — for steps in `HCI_SETUP_STEPS` (`build`, `test`, `lint`,
+  `publish`, `sonar`, `svace`) the environment (registries, caches, toolchain from the
+  image) is configured BEFORE your command — your script runs against an environment
+  that's already set up, not one it has to build from scratch.
+- **The exit code is interpreted the same way** as the built-in logic: soft steps
+  (`test`, `lint`, `image:scan`, `deps:scan`, `sonar`, `svace`, `appscreener`, `kcs`) at
+  `strict: false` produce soft-exit 78 instead of failing the pipeline, even with a
+  custom command.
 
-Не путать с `HCI_IMAGE_CMD` (без `_BUILD_`) — это узкий параметр только для s2i-режима
-внутри встроенного `image:build` (подменяет `/usr/libexec/s2i/run`), а не общий
-override-механизм шага.
+Don't confuse this with `HCI_IMAGE_CMD` (no `_BUILD_`) — that's a narrow parameter only
+for s2i mode inside the built-in `image:build` (it overrides `/usr/libexec/s2i/run`), not
+a general step-override mechanism.
 
-### Хуки — добавить, не заменяя
+### Hooks — add, don't replace
 
-- Файлы `.ci/hooks/<step>.pre.sh` и `.post.sh` (`:` в имени шага заменяется на `-`,
-  т.е. для `image:build` — `.ci/hooks/image-build.pre.sh`).
-- Inline: `HCI_BUILD_PRE`, `HCI_BUILD_POST`, и аналогично для других шагов.
+- Files `.ci/hooks/<step>.pre.sh` and `.post.sh` (`:` in the step name becomes `-`, so for
+  `image:build` it's `.ci/hooks/image-build.pre.sh`).
+- Inline: `HCI_BUILD_PRE`, `HCI_BUILD_POST`, and likewise for other steps.
 
-Хуки выполняются **вокруг** шага (до/после), не отключая встроенную реализацию или
-`HCI_<ШАГ>_CMD` — для лёгкой доп. обработки (прогреть кэш, отправить метрику). Для полной
-замены логики шага — `HCI_<ШАГ>_CMD` выше.
+Hooks run **around** the step (before/after), without disabling the built-in
+implementation or `HCI_<STEP>_CMD` — for light extra processing (warm a cache, send a
+metric). For a full replacement of the step's logic, use `HCI_<STEP>_CMD` above.
 
-### Реестры
+### Registries
 
-`HCI_REGISTRY_<TYPE>_{HOST,USER,PASSWORD,PULL_REPO,REPO}` для типов `OCI`, `OCI_PUSH`,
-`MAVEN`, `NPM`, `NUGET`, `PYPI`, `CARGO`, `GO`, `HELM`, `COMPOSER`. Пустые значения
-наследуют общие `HCI_REGISTRY_*` (которые по умолчанию берутся из `NEXUS_*`).
+`HCI_REGISTRY_<TYPE>_{HOST,USER,PASSWORD,PULL_REPO,REPO}` for types `OCI`, `OCI_PUSH`,
+`MAVEN`, `NPM`, `NUGET`, `PYPI`, `CARGO`, `GO`, `HELM`, `COMPOSER`. Empty values fall back
+to the shared `HCI_REGISTRY_*` (which default from `NEXUS_*`).
 
-### CD-переменные (`cd:bump` / `cd:notify`)
+### CD variables (`cd:bump` / `cd:notify`)
 
-| Переменная | Назначение | Дефолт |
+| Variable | Purpose | Default |
 |---|---|---|
-| `HCI_CD_GIT_URL` | URL GitOps-репозитория (без userinfo!) | — |
-| `HCI_CD_GIT_BRANCH` | целевая ветка | HEAD репозитория |
-| `HCI_CD_GIT_TOKEN` | HTTPS-токен (через `GIT_ASKPASS`, не в URL) | — |
-| `HCI_CD_GIT_USER` | username для HTTPS-токена | `oauth2` |
-| `HCI_CD_GIT_SSH_KEY` / `HCI_CD_GIT_SSH_KNOWN_HOSTS` | путь или содержимое ключа/known_hosts | — |
-| `HCI_CD_GIT_SSH_INSECURE` | пропустить проверку host key (не для прода) | `false` |
-| `HCI_CD_GIT_USER_NAME` / `HCI_CD_GIT_USER_EMAIL` | автор коммита | `hyperion-ci` / `ci@localhost` |
-| `HCI_CD_IMAGE` | явный image-ref вместо чтения из манифеста артефактов | — |
-| `HCI_CD_YAML_FILE` | путь к файлу манифеста в GitOps-репо | — |
-| `HCI_CD_YAML_PATH` | yq-путь до image-поля (используйте `select()` для multi-doc) | — |
-| `HCI_CD_NOTIFY_URL` | URL вебхука (не маскируется — не кладите секрет в query!) | — |
-| `HCI_CD_NOTIFY_METHOD` | HTTP-метод | `POST` |
-| `HCI_CD_NOTIFY_TOKEN` | Bearer-токен для вебхука | — |
-| `HCI_CD_NOTIFY_BODY` | тело запроса | — |
-| `HCI_CD_NOTIFY_TIMEOUT` | таймаут запроса, сек | `30` |
+| `HCI_CD_GIT_URL` | GitOps repository URL (no userinfo!) | — |
+| `HCI_CD_GIT_BRANCH` | target branch | the repository's HEAD |
+| `HCI_CD_GIT_TOKEN` | HTTPS token (via `GIT_ASKPASS`, never in the URL) | — |
+| `HCI_CD_GIT_USER` | username for the HTTPS token | `oauth2` |
+| `HCI_CD_GIT_SSH_KEY` / `HCI_CD_GIT_SSH_KNOWN_HOSTS` | path or content of the key/known_hosts | — |
+| `HCI_CD_GIT_SSH_INSECURE` | skip host-key checking (not for prod) | `false` |
+| `HCI_CD_GIT_USER_NAME` / `HCI_CD_GIT_USER_EMAIL` | commit author | `hyperion-ci` / `ci@localhost` |
+| `HCI_CD_IMAGE` | explicit image ref instead of reading the artifact manifest | — |
+| `HCI_CD_YAML_FILE` | path to the manifest file in the GitOps repo | — |
+| `HCI_CD_YAML_PATH` | yq path to the image field (use `select()` for multi-doc) | — |
+| `HCI_CD_NOTIFY_URL` | webhook URL (not masked — don't put a secret in the query!) | — |
+| `HCI_CD_NOTIFY_METHOD` | HTTP method | `POST` |
+| `HCI_CD_NOTIFY_TOKEN` | bearer token for the webhook | — |
+| `HCI_CD_NOTIFY_BODY` | request body | — |
+| `HCI_CD_NOTIFY_TIMEOUT` | request timeout, seconds | `30` |
 
-### Закрытый контур (air-gapped)
+### Air-gapped environments
 
-Пайплайн рассчитан на работу без прямого доступа в публичный интернет — почти всё уже
-адресуется через внутренние реестры/серверы по умолчанию или через конфигурацию:
+The pipeline is designed to work without direct public-internet access — almost
+everything already routes through internal registries/servers by default or by config:
 
-| Что | Как уже устроено |
+| What | How it already works |
 |---|---|
-| Образы сборки/рантайма/sonar/svace | Всегда через `${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/...` (meta.yaml) — ожидают внутренний реестр, не Docker Hub/GHCR |
-| Пакетные реестры (maven/npm/pip/…) | `HCI_REGISTRY_<TYPE>_*` → внутренний Nexus-прокси, см. [§Реестры](#реестры) |
-| SonarQube | `HCI_SONAR_HOST_URL` (из `SONAR_HOST`) — всегда внутренний сервер, сканер никогда не ходит в интернет |
-| Trivy | По умолчанию **server-режим**: `HCI_TRIVY_SERVER` = `http://trivy:8080` — БД уязвимостей обновляет сервер, не джоб |
+| Build/runtime/sonar/svace images | Always through `${HCI_REGISTRY_OCI_HOST}/${HCI_IMAGES_FOLDER}/...` (meta.yaml) — they expect an internal registry, not Docker Hub/GHCR |
+| Package registries (maven/npm/pip/…) | `HCI_REGISTRY_<TYPE>_*` → an internal Nexus proxy, see [§Registries](#registries) |
+| SonarQube | `HCI_SONAR_HOST_URL` (from `SONAR_HOST`) — always an internal server, the scanner never reaches the internet |
+| Trivy | **Server mode** by default: `HCI_TRIVY_SERVER` = `http://trivy:8080` — the vulnerability DB is updated by the server, not the job |
 
-**Trivy standalone** (если `HCI_TRIVY_SERVER` пуст — нет центрального Trivy-сервера):
-без сервера Trivy сам тянет БД с `ghcr.io/aquasecurity` на каждом скане. Чтобы вместо
-этого использовать внутреннее зеркало БД:
+**Trivy standalone** (if `HCI_TRIVY_SERVER` is empty — no central Trivy server): without
+a server, Trivy pulls its DB from `ghcr.io/aquasecurity` on every scan. To use an internal
+DB mirror instead:
 
 ```bash
-HCI_TRIVY_SERVER=""                                            # отключить server-режим
+HCI_TRIVY_SERVER=""                                            # disable server mode
 HCI_TRIVY_DB_REPOSITORY="internal.example/mirror/trivy-db"
 HCI_TRIVY_JAVA_DB_REPOSITORY="internal.example/mirror/trivy-java-db"
 ```
 
-Обе переменные пусты по умолчанию — поведение Trivy (дефолт на `ghcr.io`) не меняется,
-пока их не задать явно.
+Both variables are empty by default — Trivy's behavior (defaulting to `ghcr.io`) doesn't
+change until you set them explicitly.
 
-**`jq`/`yq` в tools-образе** — единственное место с хардкодом на публичный интернет,
-но это **не раннее исполнение пайплайна проекта**, а разовая сборка wrapper-образа
-(`tools/fetch-binaries.sh`, вызывается при сборке `/opt/ci`-образа, не на каждый коммит
-сервиса). Переопределяется через env на этапе сборки образа:
+**`jq`/`yq` in the tools image** — the only place hardcoded to the public internet, but
+this is **not** the project pipeline's own execution — it's a one-off wrapper-image build
+(`tools/fetch-binaries.sh`, run when building the `/opt/ci` image, not on every service
+commit). Override it via env at image-build time:
 
 ```bash
 JQ_URL="https://nexus.internal/raw/jq-1.7.1-linux-amd64" \
@@ -808,15 +817,15 @@ YQ_URL="https://nexus.internal/raw/yq_v4.44.3_linux_amd64" \
   bash tools/fetch-binaries.sh
 ```
 
-Без переопределения — дефолт на `github.com/jqlang/jq` и `github.com/mikefarah/yq`
-(те же файлы, просто без зеркала).
+Without an override, the default is `github.com/jqlang/jq` and `github.com/mikefarah/yq`
+(the same files, just without a mirror).
 
-### Манифест артефактов
+### Artifact manifest
 
-`hci-artifacts/artifacts.json`, схема `core/schema/artifacts.v2.json`. Пишется только
-через `manifest::add`. Проверка: `ci manifest:validate`.
+`hci-artifacts/artifacts.json`, schema `core/schema/artifacts.v2.json`. Written only
+through `manifest::add`. Check with `ci manifest:validate`.
 
-### Локальный запуск (без CI)
+### Local run (no CI)
 
 ```bash
 export PATH="$PWD/core/bin:$PATH"
@@ -825,12 +834,12 @@ ci build --runtime=maven --workdir=tests/fixtures/maven-service
 ci help
 ```
 
-### Генерация GitLab-компонентов
+### Generating GitLab components
 
 ```bash
-python3 tools/generate.py          # регенерировать templates/*.yml, wrappers, schema.yaml
-python3 tools/generate.py --check  # в CI: падает, если артефакты устарели
+python3 tools/generate.py          # regenerate templates/*.yml, wrappers, schema.yaml
+python3 tools/generate.py --check  # in CI: fails if artifacts are stale
 ```
 
-Руками `templates/*.yml` не редактируется — только `core/runtimes/*/meta.yaml` +
+`templates/*.yml` is never hand-edited — only `core/runtimes/*/meta.yaml` +
 `tools/generate.py`.

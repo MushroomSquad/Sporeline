@@ -1,7 +1,7 @@
 # shellcheck shell=bash
-# Повтор сетевых операций с экспоненциальной задержкой.
+# Retry for network operations with exponential backoff.
 
-# retry [-n попыток] [-d задержка_сек] команда...
+# retry [-n attempts] [-d delay_sec] command...
 retry() {
   local attempts="${HCI_RETRY_ATTEMPTS:-3}" delay="${HCI_RETRY_DELAY:-5}"
   while [[ $# -gt 0 ]]; do

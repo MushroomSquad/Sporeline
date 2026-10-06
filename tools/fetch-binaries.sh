@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Скачивает статические jq и yq в tools/bin для запекания в образы.
-# В закрытом контуре переопределите JQ_URL/YQ_URL на внутреннее зеркало (тот же файл,
-# например raw-прокси Nexus) — GitHub Releases используется только как дефолт.
+# Downloads static jq and yq into tools/bin for baking into images.
+# In an air-gapped environment, override JQ_URL/YQ_URL with an internal mirror (the same
+# file, e.g. a Nexus raw proxy) — GitHub Releases is only used as the default.
 set -euo pipefail
 DEST="$(cd "$(dirname "$0")/bin" && pwd)"
 JQ_URL="${JQ_URL:-https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64}"

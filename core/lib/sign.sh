@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Подпись и аттестация образов cosign.
+# cosign image signing and attestation.
 
 sign::enabled() {
   if [[ -n "${HCI_COSIGN_KEY:-}" ]]; then
@@ -16,7 +16,7 @@ sign::_args() {
   local -n _sargs="$1"
   _sargs=(--key "$HCI_COSIGN_KEY" --yes)
   if ! ci::is_true "${HCI_COSIGN_TLOG:-false}"; then
-    # Пустой signing config отключает transparency log и Fulcio (закрытый контур).
+    # An empty signing config disables the transparency log and Fulcio (air-gapped).
     local cfg="$HCI_TMP/cosign-signing-config.json"
     printf '{"mediaType":"application/vnd.dev.sigstore.signingconfig.v0.2+json"}' > "$cfg"
     _sargs+=(--signing-config "$cfg")

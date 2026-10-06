@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Доверенные сертификаты для инструментов разных экосистем.
+# Trusted certificates for tools across different ecosystems.
 
 tls::_system_bundle() {
   local f
@@ -9,8 +9,8 @@ tls::_system_bundle() {
   return 1
 }
 
-# Собирает системный bundle + корпоративные сертификаты в один PEM и экспортирует
-# переменные, которые понимают curl, openssl, python, node, go, git.
+# Builds the system bundle + corporate certificates into one PEM and exports
+# the variables that curl, openssl, python, node, go, and git understand.
 tls::bundle() {
   local out="$HCI_TMP/ca-bundle.pem" sys
   if [[ ! -f "$out" ]]; then
@@ -30,7 +30,7 @@ tls::has_custom() {
   [[ -n "${HCI_CA_BUNDLE:-}" && -f "$HCI_CA_BUNDLE" ]] || [[ -n "${HCI_CA_CERT:-}" && -f "$HCI_CA_CERT" ]]
 }
 
-# Аргументы curl для проверки TLS (вместо -k).
+# curl args for TLS verification (instead of -k).
 tls::curl_args() {
   local -n _args="$1"
   _args=()
@@ -41,8 +41,8 @@ tls::curl_args() {
   fi
 }
 
-# Java truststore: системные cacerts + корпоративные сертификаты.
-# Экспортирует HCI_TRUSTSTORE и HCI_JAVA_TLS_OPTS.
+# Java truststore: system cacerts + corporate certificates.
+# Exports HCI_TRUSTSTORE and HCI_JAVA_TLS_OPTS.
 tls::java_truststore() {
   local store="$HCI_TMP/truststore.jks" pass="${HCI_TRUSTSTORE_PASSWORD:-changeit}" src cert i=0
   export HCI_JAVA_TLS_OPTS=""

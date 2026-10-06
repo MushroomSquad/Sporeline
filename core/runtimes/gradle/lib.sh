@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Gradle: init-скрипты репозитория (учётные данные через getenv), jacoco, публикация.
+# Gradle: repository init scripts (credentials via getenv), jacoco, publishing.
 
 GRADLE=()
 

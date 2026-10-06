@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Тесты по классам из артефакта build; без него — с компиляцией.
+# Tests run against classes from the build artifact; without it, compiles first.
 rt::test() {
   local goals=() pre=()
   ci::words goals "$HCI_MAVEN_TEST_GOALS"

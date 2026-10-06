@@ -1,21 +1,21 @@
 # shellcheck shell=bash
-# Загрузка конфигурации.
+# Configuration loading.
 #
-# Приоритет (от высшего к низшему):
-#   1. аргументы командной строки (--key=value)
-#   2. переменные окружения (в т.ч. заданные CI)
-#   3. файл .ci.yaml проекта
+# Priority (highest to lowest):
+#   1. command-line arguments (--key=value)
+#   2. environment variables (incl. those set by the CI system)
+#   3. the project's .ci.yaml file
 #   4. runtimes/<runtime>/defaults.env
 #   5. core/defaults.env
 #
-# Ключи .ci.yaml превращаются в переменные HCI_<ПУТЬ>: build.cmd -> HCI_BUILD_CMD.
-# Секция env: экспортируется как есть (FOO: bar -> FOO=bar).
+# .ci.yaml keys turn into HCI_<PATH> variables: build.cmd -> HCI_BUILD_CMD.
+# The env section: exported as-is (FOO: bar -> FOO=bar).
 
 declare -gA _HCI_LOCKED=()
 
 HCI_DETECT_ORDER=(maven gradle dotnet go rust python bun nodejs php static)
 
-# Пустые значения не блокируют: пустой input CI означает «не задано».
+# Empty values don't lock: an empty CI input means "not set".
 config::_lock_env() {
   local name
   while IFS= read -r name; do
@@ -36,7 +36,7 @@ config::set() {
   _HCI_LOCKED["$name"]=1
 }
 
-# Применяет --key=value. Возвращает остаток аргументов в HCI_ARGS.
+# Applies --key=value. Returns the remaining arguments in HCI_ARGS.
 config::parse_args() {
   HCI_ARGS=()
   local arg key value
@@ -112,8 +112,8 @@ config::load_file() {
   done < <(ci::yaml_to_json "$file" | jq -r "$(config::_flatten_jq)")
 }
 
-# Загружает файл KEY=VALUE (синтаксис bash, значения могут ссылаться на ${VAR:-}).
-# Существующие незаблокированные значения перезаписываются: runtime-defaults важнее core-defaults.
+# Loads a KEY=VALUE file (bash syntax, values may reference ${VAR:-}).
+# Existing unlocked values are overwritten: runtime defaults outrank core defaults.
 config::load_defaults() {
   local file="$1" line name rhs
   [[ -f "$file" ]] || return 0
@@ -154,7 +154,7 @@ config::mask_secrets() {
   done < <(compgen -v | grep -E '(PASSWORD|TOKEN|SECRET|_AUTH|API_KEY|SONAR_KEY|SSH_KEY)$' || true)
 }
 
-# Профили рантайма (HCI_PROFILE=quarkus,...) — runtimes/<runtime>/profiles/<name>.env поверх defaults.env.
+# Runtime profiles (HCI_PROFILE=quarkus,...) — runtimes/<runtime>/profiles/<name>.env layered on top of defaults.env.
 config::load_profiles() {
   local profiles=() p file
   ci::split profiles "${HCI_PROFILE:-}"
@@ -186,7 +186,7 @@ config::load() {
   config::mask_secrets
 }
 
-# Печатает итоговую конфигурацию HCI_* с замаскированными секретами.
+# Prints the final HCI_* configuration with secrets masked.
 config::dump() {
   local name
   while IFS= read -r name; do

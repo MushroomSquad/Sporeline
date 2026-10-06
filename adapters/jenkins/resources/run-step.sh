@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Общий запуск шага ядра из адаптеров CI.
-# Использование: run-step.sh <шаг> [--ключ=значение ...]
-# Код 78 (мягкий шаг при HCI_STRICT=false) → предупреждение и exit 0.
-# Остальные ненулевые коды пробрасываются как есть.
+# Shared core step runner invoked from CI adapters.
+# Usage: run-step.sh <step> [--key=value ...]
+# Code 78 (a soft step under HCI_STRICT=false) → warning and exit 0.
+# Any other non-zero code is passed through as-is.
 set -uo pipefail
 
 step="${1:-}"

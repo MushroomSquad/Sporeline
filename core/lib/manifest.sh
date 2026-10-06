@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Манифест опубликованных артефактов (schemaVersion 2), см. core/schema/artifacts.v2.json.
+# Manifest of published artifacts (schemaVersion 2), see core/schema/artifacts.v2.json.
 
 HCI_MANIFEST_TYPES=(oci maven npm nuget pypi cargo helm composer generic)
 
@@ -53,8 +53,8 @@ manifest::purl() {
   esac
 }
 
-# manifest::add TYPE NAME VERSION REGISTRY [ключ=значение ...]
-# Значения true/false записываются как boolean.
+# manifest::add TYPE NAME VERSION REGISTRY [key=value ...]
+# true/false values are written as booleans.
 manifest::add() {
   local type="$1" name="$2" version="$3" registry="$4"
   shift 4

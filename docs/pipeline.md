@@ -1,24 +1,38 @@
-# Конструктор логики пайплайна
+[English](pipeline.md) | [Русский](pipeline.ru.md)
 
-Логика (ветки, when, retry, OR/AND, manual) живёт **в YAML проекта** — не в генераторе шаблонов.
-Для Jenkins — в `Jenkinsfile` / shared-library вызове (Groovy).
+# Pipeline Logic Construction
 
-Контекст решений: [DECISIONS.md](DECISIONS.md).
+Logic (branches, `when`, retry, OR/AND, manual) lives **in the project's YAML** — not in
+the template generator. For Jenkins — in the `Jenkinsfile` / shared-library call (Groovy).
 
-Компонент даёт только тонкий DAG: джобы → `ci <step>`. Дефолтные `rules` минимальные
-(вкл/выкл шага, `service_type`, publish по тегу). Всё остальное — override.
+Decision context: [DECISIONS.md](DECISIONS.md).
 
-## Уровни использования
+A component only provides a thin DAG: jobs → `ci <step>`. Default `rules` are minimal
+(step on/off, `service_type`, publish-on-tag). Everything else is an override.
 
-Пайплайн можно строить тремя способами, в порядке возрастания гибкости:
+## Usage Levels
 
-- **Уровень 1** — быстрый старт готовым пайплайном. Подключить компонент (`include: component: …/maven@tag`), выбрать рантайм и сервис-тип (образ или библиотека). Дефолтный граф из документации ниже. Уже описано в [README.md](../README.md).
+A pipeline can be built in three ways, in increasing order of flexibility:
 
-- **Уровень 2** — кастомизация готового пайплайна. Включить/выключить отдельные шаги (`test: false`, `sonar: true`), передать параметры (версия рантайма, реестры через `.ci.yaml` / `HCI_*`), переопределить логику в YAML проекта (`rules`, `needs`, `retry`, `when`). Это то, что описано в текущем содержимом этого документа: [GitLab](#gitlab-gitlab-ciml--конструктор), [GitHub](#github-actions), [Jenkins](#jenkins).
+- **Level 1** — quick start with a ready-made pipeline. Include a component
+  (`include: component: …/maven@tag`), pick a runtime and a service type (image or
+  library). The default graph is documented below. Already covered in
+  [README.md](../README.md).
 
-- **Уровень 3** — собственный граф из отдельных компонентов. Для нетипичных комбинаций шагов: например, несколько тестов с разными параметрами, lint в параллель, publish без сборки образа. Включить только нужные шаги (`maven-build`, `maven-test`, `image:scan`), задать зависимости вручную. Подробно: [Уровень 3](#уровень-3-свой-граф-из-отдельных-компонентов) ниже.
+- **Level 2** — customizing the ready-made pipeline. Turn individual steps on/off
+  (`test: false`, `sonar: true`), pass parameters (runtime version, registries via
+  `.ci.yaml` / `HCI_*`), override logic in the project's YAML (`rules`, `needs`, `retry`,
+  `when`). This is what the rest of this document covers:
+  [GitLab](#gitlab-gitlab-ciyml-as-a-construction-kit), [GitHub](#github-actions),
+  [Jenkins](#jenkins).
 
-## GitLab: `.gitlab-ci.yml` = конструктор
+- **Level 3** — a custom graph from individual components. For non-typical step
+  combinations: e.g. several tests with different parameters, lint in parallel, publish
+  without building an image. Include only the steps you need
+  (`maven-build`, `maven-test`, `image:scan`), wire dependencies by hand. Details:
+  [Level 3](#level-3-a-custom-graph-from-individual-components) below.
+
+## GitLab: `.gitlab-ci.yml` as a construction kit
 
 ```yaml
 include:
@@ -30,7 +44,7 @@ include:
       sonar: false
       image_publish: true
 
-# --- логика ниже: обычный GitLab CI YAML ---
+# --- logic below: plain GitLab CI YAML ---
 
 workflow:
   rules:
@@ -58,29 +72,31 @@ image:publish:
       when: manual
       allow_failure: true
 
-# выключить джоб полностью
+# disable a job entirely
 sonar:
   rules:
     - when: never
 ```
 
-Имена джобов = имена шагов (`build`, `test`, `image:publish`, …).
-С `job_prefix: "svc:"` → `svc:build`, `svc:test`, …
+Job names = step names (`build`, `test`, `image:publish`, …).
+With `job_prefix: "svc:"` → `svc:build`, `svc:test`, …
 
-### Что можно переопределить
+### What can be overridden
 
-Любое поле джоба GitLab: `rules`, `retry`, `needs`, `when`, `only`/`except` (legacy),
+Any field of a GitLab job: `rules`, `retry`, `needs`, `when`, `only`/`except` (legacy),
 `interruptible`, `tags`, `image`, `before_script`, `after_script`, `artifacts`, …
 
-Inputs компонента — удобные тумблеры шагов и параметры рантайма, не замена `rules`.
+Component inputs are convenient step toggles and runtime parameters, not a replacement
+for `rules`.
 
-### Поведение шага (не граф)
+### Step behavior (not the graph)
 
-Команды, хуки, реестры — `.ci.yaml` / `HCI_*` (ядро `ci <step>`). Это отдельно от логики пайплайна.
+Commands, hooks, registries — `.ci.yaml` / `HCI_*` (the `ci <step>` core). This is
+separate from pipeline logic.
 
 ## GitHub Actions
 
-Reusable workflow — тонкий граф. Логика — в вызывающем workflow:
+A reusable workflow — a thin graph. Logic lives in the calling workflow:
 
 ```yaml
 on:
@@ -98,14 +114,14 @@ jobs:
       build-image: …
       tools-image: …
       image-publish: true
-    # условия — на уровне jobs.<id>.if у caller, или forks workflow
+    # conditions — at the caller's jobs.<id>.if level, or fork the workflow
 ```
 
-Скопируйте `pipeline.yml` в свой репозиторий и правьте `if:` / `on:` как обычный Actions YAML.
+Copy `pipeline.yml` into your repo and edit `if:` / `on:` like any Actions YAML.
 
 ## Jenkins
 
-Конструктор — Groovy (`Jenkinsfile` или обёртка над `hciPipeline`):
+The construction kit is Groovy (`Jenkinsfile` or a wrapper over `hciPipeline`):
 
 ```groovy
 hciPipeline(
@@ -115,27 +131,35 @@ hciPipeline(
   toolsImage: '…',
 )
 
-// или свой pipeline { stages { when { branch 'main' }; steps { hci('build') } } }
+// or your own pipeline { stages { when { branch 'main' }; steps { hci('build') } } }
 ```
 
-`when { }`, `retry()`, `input` — стандартный Declarative/Scripted Jenkins, без отдельного DSL.
+`when { }`, `retry()`, `input` — plain Declarative/Scripted Jenkins, no separate DSL.
 
-## Уровень 3: свой граф из отдельных компонентов
+## Level 3: a custom graph from individual components
 
-### Какие шаги доступны гранулярно?
+### Which steps are available granularly?
 
-Отдельные компоненты для каждого рантайма: `build`, `test`, `lint`, `publish` и образ — `image:build`, `image:scan`, `image:publish`. Эти шаги часто комбинируются нетипичными графами (например, тест без публикации, или несколько `test` с разными параметрами).
+Individual components per runtime: `build`, `test`, `lint`, `publish`, and the image —
+`image:build`, `image:scan`, `image:publish`. These steps are often combined in
+non-typical graphs (e.g. a test without publish, or several `test` runs with different
+parameters).
 
-Анализы и сканы — `deps:scan`, `sonar`, `svace`, `appscreener`, `kcs` — остаются только в бандлах (`analyze.yml`, `image.yml`). В практике они всегда включаются/выключаются пачкой через входные переменные уровня 2, не собираются поштучно. Это не потеря функциональности (уровень 2 уже даёт переключение каждого тумблером), а экономия дефицитного ресурса компонентов.
+Analysis and scans — `deps:scan`, `sonar`, `svace`, `appscreener`, `kcs` — stay bundle-only
+(`analyze.yml`, `image.yml`). In practice they're always switched on/off as a batch via
+level-2 input variables, never assembled piece by piece. This isn't a loss of
+functionality (level 2 already gives a toggle for each one) — it's saving a scarce
+resource, the component count.
 
-**Цепочка зависимостей:**
-- `lint`, `deps:scan`, `appscreener`, `svace` независимы от `build` (работают на исходниках)
-- `test`, `sonar`, `publish`, `image:build` требуют `build`
-- `image:scan`, `kcs`, `image:publish` требуют `image:build` транзитивно
+**Dependency chain:**
+- `lint`, `deps:scan`, `appscreener`, `svace` are independent of `build` (they work on
+  sources)
+- `test`, `sonar`, `publish`, `image:build` require `build`
+- `image:scan`, `kcs`, `image:publish` transitively require `image:build`
 
-### Рецепты по CI-системам
+### Recipes per CI system
 
-#### GitLab: гранулярные компоненты
+#### GitLab: granular components
 
 ```yaml
 include:
@@ -146,8 +170,8 @@ include:
     inputs:
       runtime_version: "21"
 
-# Укажите зависимости и условия вручную — одним блоком, не отдельными `test:`,
-# иначе второй ключ в YAML молча затрёт первый
+# Set dependencies and conditions by hand, in one block — not as separate `test:`
+# keys, or the second key would silently clobber the first in YAML
 test:
   needs:
     - build
@@ -158,11 +182,12 @@ test:
         - src/**/*
 ```
 
-Замечание: все гранулярные компоненты одного `job_prefix` должны использовать один и тот же `job_prefix` (как и в бандлах) — иначе `needs:` не найдёт правильное имя джоба.
+Note: every granular component with the same `job_prefix` must use that same
+`job_prefix` (just like with bundles) — otherwise `needs:` won't find the right job name.
 
-#### GitHub Actions: гранулярные компоненты
+#### GitHub Actions: granular components
 
-Composite action `action.yml` поддерживает вызовы отдельных шагов через входную переменную `step`:
+The composite action `action.yml` supports calling individual steps via the `step` input:
 
 ```yaml
 jobs:
@@ -188,9 +213,9 @@ jobs:
           step: test
 ```
 
-#### Jenkins: гранулярные компоненты
+#### Jenkins: granular components
 
-Вызовите шаги напрямую из своего `Jenkinsfile`, минуя `hciPipeline()`:
+Call steps directly from your own `Jenkinsfile`, bypassing `hciPipeline()`:
 
 ```groovy
 @Library('hyperion-ci') _
@@ -209,35 +234,46 @@ pipeline {
 }
 ```
 
-### Зависимости гранулярных файлов
+### Granular file dependencies
 
-Компоненты, требующие логических предшественников:
+Components that require logical predecessors:
 
-| Компонент | Требует | Что произойдёт без требуемого |
+| Component | Requires | What happens without it |
 |-----------|---------|-------------------------------|
-| `*-image-scan.yml` | `*-image-build.yml` в том же `job_prefix` | `log::die` в момент запуска на отсутствующую директорию OCI образа |
-| `*-image-publish.yml` | `*-image-build.yml` в том же `job_prefix` | `log::die` в момент запуска на отсутствующую директорию OCI образа |
+| `*-image-scan.yml` | `*-image-build.yml` with the same `job_prefix` | `log::die` at step start, on the missing OCI image directory |
+| `*-image-publish.yml` | `*-image-build.yml` with the same `job_prefix` | `log::die` at step start, on the missing OCI image directory |
 
-Ошибка мгновенная (выполняется в `script:` шага), название артефакта явное, диагностика самопояснительна.
+The error is immediate (it fires in the step's `script:`), the artifact name is explicit,
+the diagnostic is self-explanatory.
 
-### Дефолты гранулярных файлов
+### Granular file defaults
 
-Гранулярные компоненты используют более узкий дефолт, чем бандлы:
-- Нет `HCI_JOB_ENABLED` — сам выбор файла компонента это сигнал включения
-- Нет `service_type`-ворот — работают для всех типов сервиса
-- Publish-джобы (`*-publish.yml`, `*-image-publish.yml`) по-прежнему запускаются только по тегу (правило `tag_only`)
+Granular components use a narrower default than bundles:
+- No `HCI_JOB_ENABLED` — choosing the component file itself is the enable signal
+- No `service_type` gate — they work for every service type
+- Publish jobs (`*-publish.yml`, `*-image-publish.yml`) still only run on a tag (the
+  `tag_only` rule)
 
-## CD: `cd:bump` и `cd:notify`
+## CD: `cd:bump` and `cd:notify`
 
 ### `cd:bump`
 
-Обновляет GitOps-манифесты: клонирует репозиторий, редактирует один YAML-путь (image-тег или digest) через `yq`, коммитит и пушит в ветку. При конфликте слияния автоматически перезагружает remote-ветку и пересчитывает правку. Опциональный шаг (выключен по умолчанию), падает при ошибке (hard-fail). Запускается по тегу по умолчанию (правило `rules: image_only, tag_only`, как `image:publish`).
+Updates GitOps manifests: clones the repository, edits a single YAML path (image tag or
+digest) via `yq`, commits and pushes to a branch. On a merge conflict it automatically
+reloads the remote branch and recomputes the edit. An optional step (off by default),
+hard-fails on error. Runs on a tag by default (the `image_only, tag_only` rule, same as
+`image:publish`).
 
 ### `cd:notify`
 
-Отправляет HTTP-вебхук (authenticated) для уведомления GitOps-контроллера об обновлении. Поддерживает любой HTTP-приёмник: ArgoCD, Flux notification-controller, кастомные. Опциональный шаг (выключен по умолчанию), hard-fail, запускается по тегу по умолчанию. Если включены оба шага, `cd:notify` автоматически дождётся `cd:bump` (зависимость проводится автоматически генератором с `optional: true`, так что включение только `cd:notify` без `cd:bump` работает при желании).
+Sends an authenticated HTTP webhook to notify a GitOps controller of the update. Works
+with any HTTP receiver: ArgoCD, Flux notification-controller, custom ones. An optional
+step (off by default), hard-fail, runs on a tag by default. If both steps are enabled,
+`cd:notify` automatically waits for `cd:bump` (the dependency is wired by the generator
+automatically with `optional: true`, so enabling only `cd:notify` without `cd:bump` works
+too, if desired).
 
-### Использование двух шагов вместе
+### Using both steps together
 
 ```yaml
 include:
@@ -265,69 +301,91 @@ cd:notify:
     HCI_CD_NOTIFY_TOKEN: "$ARGOCD_WEBHOOK_TOKEN"
 ```
 
-### Учётные данные и доступ
+### Credentials and access
 
-#### Переменная `HCI_CD_GIT_USER` по платформам
+#### `HCI_CD_GIT_USER` by platform
 
-При использовании HTTPS с токеном укажите платформенный username в `HCI_CD_GIT_USER`:
+When using HTTPS with a token, set the platform username in `HCI_CD_GIT_USER`:
 
-| Платформа | `HCI_CD_GIT_USER` |
+| Platform | `HCI_CD_GIT_USER` |
 |---|---|
-| GitLab | `oauth2` (дефолт) |
+| GitLab | `oauth2` (default) |
 | GitHub App | `x-access-token` |
-| Bitbucket Cloud | `x-token-auth` или реальный username |
+| Bitbucket Cloud | `x-token-auth` or a real username |
 
-#### SSH-ключи и known_hosts
+#### SSH keys and known_hosts
 
-Переменные `HCI_CD_GIT_SSH_KEY` и `HCI_CD_GIT_SSH_KNOWN_HOSTS` принимают либо путь до файла, либо содержимое.
+`HCI_CD_GIT_SSH_KEY` and `HCI_CD_GIT_SSH_KNOWN_HOSTS` accept either a file path or raw
+content.
 
-**Рекомендация**: объявите их как GitLab **File**-тип CI/CD переменные (не Masked). Причина — GitLab-маскирование не поддерживает многострочные значения; приватный SSH-ключ из нескольких строк и `known_hosts`-блок попросту не маскируются при попытке сохранить как Masked-переменную. File-переменная даёт шагу путь к файлу в контейнере, избегая этой проблемы:
+**Recommendation**: declare them as GitLab **File**-type CI/CD variables (not Masked).
+Reason — GitLab masking doesn't support multi-line values; a multi-line private SSH key
+and a `known_hosts` block simply can't be masked when saved as a Masked variable. A File
+variable instead gives the step a path to the file inside the container, avoiding the
+issue:
 
 ```yaml
-# В GitLab CI/CD Settings → Variables:
-# HCI_CD_GIT_SSH_KEY (тип File) = загрузить приватный ключ
-# HCI_CD_GIT_SSH_KNOWN_HOSTS (тип File) = загрузить known_hosts
+# In GitLab CI/CD Settings → Variables:
+# HCI_CD_GIT_SSH_KEY (type: File) = upload the private key
+# HCI_CD_GIT_SSH_KNOWN_HOSTS (type: File) = upload known_hosts
 ```
 
-### Многодокументные YAML-манифесты
+### Multi-document YAML manifests
 
-Если целевой файл манифестов содержит несколько документов, разделённых `---` (частый случай в Argo CD / Flux репозиториях — Service + Deployment в одном файле), `HCI_CD_YAML_PATH` должен быть защищён `select()`-выражением. Иначе путь может случайно совпасть и на чужом документе в том же файле, что приведёт к ошибке гейта.
+If the target manifest file contains several documents separated by `---` (common in
+Argo CD / Flux repos — a Service + Deployment in one file), `HCI_CD_YAML_PATH` must be
+guarded with a `select()` expression. Otherwise the path could accidentally match the
+wrong document in the same file, failing the gate.
 
-Правильный пример:
+Correct example:
 
 ```bash
 HCI_CD_YAML_PATH='(select(.kind=="Deployment").spec.template.spec.containers[0].image)'
 ```
 
-Выражение вернёт image-путь **только** из блока с `kind: Deployment`, игнорируя соседние Service-документы.
+The expression returns the image path **only** from the block with `kind: Deployment`,
+ignoring neighboring Service documents.
 
-### Вебхуки и токены
+### Webhooks and tokens
 
-`HCI_CD_NOTIFY_URL` **не маскируется** автоматически. Причина: GitLab-маскирование отклоняет значения, содержащие `/`, а в URL всегда есть `/`. Эта же переменная не перехватывается собственным regex-редактором проекта (`log::redact`).
+`HCI_CD_NOTIFY_URL` is **not masked** automatically. Reason: GitLab masking rejects
+values containing `/`, and a URL always has one. This same variable isn't caught by the
+project's own regex redactor (`log::redact`) either.
 
-Если вебхук требует секрет (распространённый паттерн вида `?token=...` в query-string), **не кладите секрет в сам URL**. Используйте вместо этого `HCI_CD_NOTIFY_TOKEN` — он отправляется как `Authorization: Bearer <токен>` и защищен от утечек в лог:
+If the webhook needs a secret (a common `?token=...` query-string pattern), **don't put
+the secret in the URL itself**. Use `HCI_CD_NOTIFY_TOKEN` instead — it's sent as
+`Authorization: Bearer <token>` and is protected from log leaks:
 
 ```bash
-# Плохо:
+# Bad:
 HCI_CD_NOTIFY_URL='https://webhook.example.com/hook?token=secret123'
 
-# Хорошо:
+# Good:
 HCI_CD_NOTIFY_URL='https://webhook.example.com/hook'
-HCI_CD_NOTIFY_TOKEN='secret123'  # отправляется в Authorization-заголовке
+HCI_CD_NOTIFY_TOKEN='secret123'  # sent in the Authorization header
 ```
 
-### Пограничные случаи
+### Edge cases
 
-**Если включен `cd_notify: true`, но `cd_bump: false` и `image_publish: false` без явного `HCI_CD_IMAGE`:** пайплайн не собирается (ошибка на уровне генератора — needs на несуществующие шаги). Это необычная конфигурация; если вы её встретили, проверьте логику вашего пайплайна вручную. Решение — либо включить `image_publish`, либо задать `HCI_CD_IMAGE` явно для override из другого источника.
+**If `cd_notify: true` is enabled but `cd_bump: false` and `image_publish: false`, with no
+explicit `HCI_CD_IMAGE`:** the pipeline won't assemble (a generator-level error — `needs`
+on non-existent steps). This is an unusual configuration; if you hit it, double-check your
+pipeline's logic by hand. The fix is to either enable `image_publish`, or set
+`HCI_CD_IMAGE` explicitly from some other source.
 
 ### Non-Goal: `kustomize`
 
-Редактирование манифестов через `kustomize` **не поддерживается** в этой версии. Бинарь `kustomize` отсутствует в tools-образе проекта (подтверждено в `tools/fetch-binaries.sh` — только `yq`). Добавление поддержки `kustomize` требует расширения `tools/fetch-binaries.sh` и пересборки tools-образа — это отдельная задача, не входящая в данное изменение. Прямое редактирование YAML-пути через `yq` полностью покрывает типичный случай (поле `image:` в Deployment / values.yaml).
+Editing manifests via `kustomize` is **not supported** in this version. The `kustomize`
+binary is absent from the project's tools image (confirmed in `tools/fetch-binaries.sh` —
+only `yq` is there). Adding `kustomize` support would require extending
+`tools/fetch-binaries.sh` and rebuilding the tools image — a separate piece of work, out
+of scope for this change. Direct YAML-path editing via `yq` fully covers the typical case
+(the `image:` field in a Deployment / values.yaml).
 
-## Слои (кратко)
+## Layers (brief)
 
-| Слой | Где | Ответственность |
+| Layer | Where | Responsibility |
 |------|-----|-----------------|
-| Граф по умолчанию | `templates/*.yml` (generate) | джобы + `ci <step>`, минимальные rules |
-| Логика пайплайна | **YAML/Groovy проекта** | ветки, retry, manual, OR/AND, changes |
-| Поведение шага | `.ci.yaml` / env / hooks | build/test/publish команды |
+| Default graph | `templates/*.yml` (generated) | jobs + `ci <step>`, minimal rules |
+| Pipeline logic | **project YAML/Groovy** | branches, retry, manual, OR/AND, changes |
+| Step behavior | `.ci.yaml` / env / hooks | build/test/publish commands |

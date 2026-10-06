@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Общие утилиты.
+# Shared utilities.
 
 readonly HCI_SKIP_CODE=86
 
@@ -10,7 +10,7 @@ ci::is_true() {
   esac
 }
 
-# ci::split ИМЯ_МАССИВА СТРОКА — делит по переводам строк и запятым, обрезает пробелы.
+# ci::split ARRAY_NAME STRING — splits on newlines and commas, trims whitespace.
 ci::split() {
   local -n _split_out="$1"
   local _raw="${2:-}" _item
@@ -24,7 +24,7 @@ ci::split() {
   return 0
 }
 
-# ci::split_lines ИМЯ_МАССИВА СТРОКА — делит только по переводам строк (для KEY=VALUE).
+# ci::split_lines ARRAY_NAME STRING — splits only on newlines (for KEY=VALUE).
 ci::split_lines() {
   local -n _lines_out="$1"
   local _raw="${2:-}" _item
@@ -36,7 +36,7 @@ ci::split_lines() {
   return 0
 }
 
-# ci::words ИМЯ_МАССИВА СТРОКА — делит по пробелам (для дополнительных аргументов).
+# ci::words ARRAY_NAME STRING — splits on whitespace (for extra arguments).
 ci::words() {
   local -n _words_out="$1"
   _words_out=()
@@ -53,7 +53,7 @@ ci::require() {
 
 ci::has() { command -v "$1" >/dev/null 2>&1; }
 
-# Пропуск шага: печатает причину и завершает шаг с кодом пропуска.
+# Skips the step: prints the reason and exits with the skip code.
 ci::skip() {
   log::info "Шаг пропущен: $*"
   exit "$HCI_SKIP_CODE"
@@ -67,7 +67,7 @@ ci::slug() {
   printf '%s' "${s%-}"
 }
 
-# Подстановка ${VAR} в строке из доверенных файлов (meta.yaml, defaults.env).
+# Substitutes ${VAR} in a string from trusted files (meta.yaml, defaults.env).
 ci::expand() {
   local __s="$1"
   __s="${__s//\\/\\\\}"
@@ -91,7 +91,7 @@ ci::meta_file() {
   printf '%s/runtimes/%s/meta.yaml' "$HCI_HOME" "${1:-$HCI_RUNTIME}"
 }
 
-# ci::meta JQ_ВЫРАЖЕНИЕ [РАНТАЙМ] — читает поле meta.yaml рантайма.
+# ci::meta JQ_EXPRESSION [RUNTIME] — reads a field from the runtime's meta.yaml.
 ci::meta() {
   local expr="$1" file
   file="$(ci::meta_file "${2:-}")"
@@ -99,7 +99,7 @@ ci::meta() {
   ci::yaml_to_json "$file" | jq -r "$expr // empty"
 }
 
-# Образ рантайма из meta.yaml: ci::meta_image build|runtime|sonar|svace [версия]
+# Runtime image from meta.yaml: ci::meta_image build|runtime|sonar|svace [version]
 ci::meta_image() {
   local kind="$1" version="${2:-${HCI_RUNTIME_VERSION:-}}" raw
   [[ -n "$version" ]] || version="$(ci::meta '.default_version')"
@@ -119,7 +119,7 @@ ci::xml_escape() {
   printf '%s' "$s"
 }
 
-# Первый существующий файл из списка glob-шаблонов (или код 1).
+# First existing file from a list of glob patterns (or exit code 1).
 ci::first_file() {
   local p f
   shopt -s nullglob globstar
@@ -132,7 +132,7 @@ ci::first_file() {
   return 1
 }
 
-# Все существующие файлы по glob-шаблонам через запятую.
+# All existing files matching the glob patterns, comma-joined.
 ci::glob_join() {
   local p f out=()
   shopt -s nullglob globstar

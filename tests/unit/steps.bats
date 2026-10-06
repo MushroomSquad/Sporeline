@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Общие шаги с заглушками buildah/skopeo/trivy/cosign: проверяем формируемые команды.
+# Shared steps with buildah/skopeo/trivy/cosign stubs: verify the commands they build.
 
 load helper
 

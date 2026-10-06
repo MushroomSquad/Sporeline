@@ -1,20 +1,20 @@
-[English](README.md) | [Русский](README.ru.md)
+[English](README.md) | Русский
 
-# GitLab CI/CD Adapter
+# GitLab CI/CD — адаптер
 
-Components — a thin YAML graph over the `ci <step>` core. Files live in `templates/`.
+Компоненты — тонкий YAML-граф над ядром `ci <step>`. Файлы в `templates/`.
 
 ```bash
 python3 tools/generate.py
 python3 tools/generate.py --check
 ```
 
-`templates/*.yml` is never hand-edited (except a deliberate fork).
+Не править `templates/*.yml` руками (кроме осознанного форка).
 
-**Pipeline logic** (branches, retry, manual, OR/AND) lives in the project's
-`.gitlab-ci.yml`: see [docs/pipeline.md](../../docs/pipeline.md).
+**Логика пайплайна** (ветки, retry, manual, OR/AND) — в `.gitlab-ci.yml` проекта:
+см. [docs/pipeline.md](../../docs/pipeline.ru.md).
 
-## Including It
+## Подключение
 
 ```yaml
 include:
@@ -37,7 +37,7 @@ include:
       appscreener: false
       kcs: false
 
-# a logic-customization example — plain GitLab YAML:
+# пример кастомизации логики — обычный GitLab YAML:
 workflow:
   rules:
     - if: $CI_COMMIT_BRANCH =~ /^(main|develop)$/
@@ -50,20 +50,19 @@ image:publish:
       when: manual
 ```
 
-## Job Graph (Default)
+## Граф джобов (дефолт)
 
 - `lint`, `deps:scan`, `svace`, `appscreener` — `needs: []`
-- `build` — the DAG root
-- `test`, `sonar` — after `build`
+- `build` — корень DAG
+- `test`, `sonar` — после `build`
 - `image:build` → `image:scan` / `kcs` → `image:publish` (tag)
 - `publish` — library + tag
 
-Soft steps: `allow_failure: exit_codes: [78]`.
+Мягкие шаги: `allow_failure: exit_codes: [78]`.
 
-## Granular Components
+## Гранулярные компоненты
 
-For a fully custom graph built from individual components, see
-[Level 3](../../docs/pipeline.md#level-3-a-custom-graph-from-individual-components):
+Для полностью кастомного графа из отдельных компонентов см. [Уровень 3](../../docs/pipeline.ru.md#уровень-3-свой-граф-из-отдельных-компонентов):
 
 ```yaml
 include:

@@ -1,6 +1,6 @@
 # shellcheck shell=bash
-# Svace: перехват сборки, удалённый анализ, отчёт SARIF.
-# Команда сборки: HCI_SVACE_BUILD_CMD или rt::svace_build_cmd рантайма.
+# Svace: build interception, remote analysis, SARIF report.
+# Build command: HCI_SVACE_BUILD_CMD or the runtime's rt::svace_build_cmd.
 
 step::svace() {
   ci::require svace

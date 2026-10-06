@@ -1,9 +1,12 @@
-# Jenkins — адаптер
+[English](README.md) | [Русский](README.ru.md)
 
-Shared library: `hci('build')` / `hciPipeline(...)`. Логика — в **Jenkinsfile** (Groovy `when`, `retry`, `input`).
-См. [docs/pipeline.md](../../docs/pipeline.md).
+# Jenkins Adapter
 
-## Один шаг
+Shared library: `hci('build')` / `hciPipeline(...)`. Logic lives in the **Jenkinsfile**
+(Groovy `when`, `retry`, `input`).
+See [docs/pipeline.md](../../docs/pipeline.md).
+
+## A Single Step
 
 ```groovy
 @Library('hyperion-ci') _
@@ -17,9 +20,9 @@ pipeline {
 }
 ```
 
-Код **78** → `unstable`.
+Code **78** → `unstable`.
 
-## Полный пайплайн (тонкий дефолт)
+## Full Pipeline (Thin Default)
 
 ```groovy
 @Library('hyperion-ci') _
@@ -33,11 +36,13 @@ hciPipeline(
 )
 ```
 
-Своя логика веток/manual — пишите declarative/scripted Jenkinsfile с `hci(step: …)` напрямую.
+For your own branch/manual logic, write a declarative/scripted Jenkinsfile with
+`hci(step: …)` directly.
 
-## Гранулярные компоненты
+## Granular Components
 
-Для полностью кастомного графа из отдельных компонентов см. [Уровень 3](../../docs/pipeline.md#уровень-3-свой-граф-из-отдельных-компонентов):
+For a fully custom graph built from individual components, see
+[Level 3](../../docs/pipeline.md#level-3-a-custom-graph-from-individual-components):
 
 ```groovy
 @Library('hyperion-ci') _

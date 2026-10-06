@@ -1,11 +1,11 @@
 # shellcheck shell=bash
-# Сборка образа. Режимы (HCI_IMAGE_BUILD_MODE):
-#   auto        dockerfile, если есть Containerfile/Dockerfile, иначе HCI_IMAGE_DEFAULT_MODE рантайма
-#   base        HCI_RUNTIME_IMAGE + содержимое HCI_IMAGE_CONTEXT + HCI_IMAGE_RUN + config
-#   dockerfile  buildah bud с кэшем слоёв
-#   s2i         builder-образ + /usr/libexec/s2i/assemble
+# Image build. Modes (HCI_IMAGE_BUILD_MODE):
+#   auto        dockerfile if a Containerfile/Dockerfile exists, otherwise the runtime's HCI_IMAGE_DEFAULT_MODE
+#   base        HCI_RUNTIME_IMAGE + HCI_IMAGE_CONTEXT contents + HCI_IMAGE_RUN + config
+#   dockerfile  buildah bud with layer caching
+#   s2i         builder image + /usr/libexec/s2i/assemble
 #   cekit       cekit build ... buildah
-# Результат: OCI layout в HCI_OCI_DIR (multi-arch — индекс со всеми платформами).
+# Result: an OCI layout in HCI_OCI_DIR (multi-arch — an index with all platforms).
 
 image::dockerfile() {
   local f
@@ -55,7 +55,7 @@ image::labels() {
   _labels+=("${extra[@]+"${extra[@]}"}")
 }
 
-# Применяет настройки контейнера (cmd, entrypoint, user, env, порты, метки).
+# Applies container settings (cmd, entrypoint, user, env, ports, labels).
 image::configure() {
   local c="$1" item args=()
   local labels=() envs=() ports=()
@@ -71,7 +71,7 @@ image::configure() {
   log::cmd buildah config "${args[@]}" "$c"
 }
 
-# Раскрывает HCI_IMAGE_CONTEXT (пути и glob через пробел/запятую/строки) с учётом исключений.
+# Expands HCI_IMAGE_CONTEXT (paths and globs separated by space/comma/newline), honoring exclusions.
 image::context_files() {
   local -n _files="$1"
   local patterns=() excludes=() p f e skip

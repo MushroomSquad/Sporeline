@@ -1,7 +1,7 @@
 # shellcheck shell=bash
-# Реестры артефактов. Для каждого типа (OCI, OCI_PUSH, MAVEN, NPM, NUGET, PYPI, CARGO, GO, HELM, COMPOSER)
-# поля HCI_REGISTRY_<TYPE>_{HOST,USER,PASSWORD,PULL_REPO,REPO,SNAPSHOT_REPO}; отсутствующие
-# HOST/USER/PASSWORD берутся из общих HCI_REGISTRY_{HOST,USER,PASSWORD}.
+# Artifact registries. For each type (OCI, OCI_PUSH, MAVEN, NPM, NUGET, PYPI, CARGO, GO, HELM, COMPOSER)
+# the fields are HCI_REGISTRY_<TYPE>_{HOST,USER,PASSWORD,PULL_REPO,REPO,SNAPSHOT_REPO}; missing
+# HOST/USER/PASSWORD fall back to the shared HCI_REGISTRY_{HOST,USER,PASSWORD}.
 
 registry::_field() {
   local type="${1^^}" field="${2^^}" name
@@ -40,7 +40,7 @@ registry::url() {
   printf '%s://%s%s' "$(registry::scheme)" "$host" "${repo:+/$repo}"
 }
 
-# URL с учётными данными внутри (для инструментов, не умеющих отдельную авторизацию).
+# URL with embedded credentials (for tools that can't do separate auth).
 registry::url_with_auth() {
   local type="$1" kind="${2:-pull}" url user pass
   url="$(registry::url "$type" "$kind")"
@@ -53,7 +53,7 @@ registry::url_with_auth() {
   printf '%s' "$url"
 }
 
-# Конфиг curl с учётными данными для передачи через stdin (curl -K -), чтобы пароль не попал в ps.
+# curl config with credentials passed via stdin (curl -K -), so the password never reaches ps.
 registry::curl_auth() {
   local cred
   cred="$(registry::user "$1"):$(registry::password "$1")"
@@ -65,7 +65,7 @@ registry::_containers_conf_dir() {
   printf '%s/containers' "${XDG_CONFIG_HOME:-${HOME:-/tmp}/.config}"
 }
 
-# Настраивает TLS/insecure для OCI-реестра (buildah, skopeo, podman).
+# Configures TLS/insecure for an OCI registry (buildah, skopeo, podman).
 registry::oci_trust() {
   local host="$1" dir
   [[ -n "$host" ]] || return 0
@@ -86,7 +86,7 @@ registry::_oci_login_once() {
   "$tool" login --authfile "$REGISTRY_AUTH_FILE" -u "$user" --password-stdin "$host" <<< "$pass" >/dev/null
 }
 
-# registry::oci_login TYPE (OCI или OCI_PUSH)
+# registry::oci_login TYPE (OCI or OCI_PUSH)
 registry::oci_login() {
   local type="$1" host user pass tool
   host="$(registry::host "$type")"

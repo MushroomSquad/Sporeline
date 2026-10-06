@@ -12,7 +12,7 @@ rt::build() {
   else
     ci::require composer
     log::cmd composer install --no-interaction --prefer-dist --no-progress
-    # Для образа: исходники + vendor.
+    # For the image: sources + vendor.
     tar -C "$HCI_WORKDIR_ABS" -cf - --exclude="$dest" --exclude=.git --exclude=.cache . | tar -C "$dest" -xf -
   fi
 }

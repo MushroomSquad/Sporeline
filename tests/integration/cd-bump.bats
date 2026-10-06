@@ -1,9 +1,9 @@
 #!/usr/bin/env bats
-# Интеграционные тесты cd:bump: step::cd_bump целиком против настоящего bare git-репозитория
-# (file:// транспорт) — happy path, push-конфликт (reapply/plain-retry), security-негативы,
-# инвариант credential.helper= на каждом clone/push (защита от персистентности в ~/.git-credentials).
-# В отличие от tests/unit/cd-bump.bats (функции по отдельности, git замокан), здесь настоящий git
-# и настоящий репозиторий — проверяется их фактическое взаимодействие через весь step::cd_bump.
+# Integration tests for cd:bump: step::cd_bump end-to-end against a real bare git repository
+# (file:// transport) — happy path, push conflict (reapply/plain-retry), security negatives,
+# the credential.helper= invariant on every clone/push (protection against ~/.git-credentials persistence).
+# Unlike tests/unit/cd-bump.bats (individual functions, git mocked), this uses real git and
+# a real repository — verifying their actual interaction through the whole step::cd_bump.
 
 load ../unit/helper
 
@@ -55,8 +55,8 @@ teardown() {
 }
 
 @test "integration: push-конфликт (fetch first) — fetch+reset+reapply восстанавливает и допушивает" {
-  # pre-receive-хук отклоняет ровно первый push сообщением из классификатора retryable-reapply,
-  # имитируя гонку с другим писателем между клоном шага и его push.
+  # A pre-receive hook rejects exactly the first push with a message from the retryable-reapply
+  # classifier, simulating a race with another writer between the step's clone and its push.
   local flag="$BASEDIR/reject_once"
   cat > "$ORIGIN/hooks/pre-receive" <<HOOK
 #!/bin/sh
@@ -103,7 +103,7 @@ SHIM
 
   [ "$status" -eq 0 ]
   [ "$(wc -l < "$calls")" -eq 2 ]
-  # plain-retry не должен трогать fetch/reset — только reapply-ветка делает это
+  # plain-retry must not touch fetch/reset — only the reapply branch does that
   [ ! -s "$fetches" ]
   local check; check="$(mktemp -d)"
   "$REAL_GIT" clone -q "file://$ORIGIN" "$check"
@@ -134,7 +134,7 @@ HOOK
   run step::cd_bump
   [ "$status" -ne 0 ]
   [[ "$output" != *"FAKE-KEY-MATERIAL-zzzz"* ]]
-  # фатальная классификация не ретраится: лог не должен содержать вторую попытку
+  # fatal classification isn't retried: the log must not contain a second attempt
   [[ "$output" != *"попытка 2"* ]]
 }
 

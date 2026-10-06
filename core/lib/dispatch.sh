@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Диспетчер шагов: ci <шаг> [--ключ=значение ...]
+# Step dispatcher: ci <step> [--key=value ...]
 
 declare -gA HCI_STEP_KIND=(
   [build]=runtime [test]=runtime [lint]=runtime [publish]=runtime
@@ -16,9 +16,9 @@ declare -gA HCI_STEP_FILE=(
   [cd:bump]=cd-bump [cd:notify]=cd-notify
 )
 
-# Шаги, падение которых при HCI_STRICT=false не валит пайплайн.
+# Steps whose failure under HCI_STRICT=false doesn't fail the pipeline.
 HCI_SOFT_STEPS=" test lint image:scan deps:scan sonar svace appscreener kcs "
-# Шаги, перед которыми настраивается окружение рантайма (реестры, кэши, toolchain).
+# Steps before which the runtime environment is set up (registries, caches, toolchain).
 HCI_SETUP_STEPS=" build test lint publish sonar svace "
 
 dispatch::usage() {

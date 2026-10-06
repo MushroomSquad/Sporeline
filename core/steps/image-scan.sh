@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Анализ образа Trivy. Один проход сканирования, из отчёта — SBOM (переиспользуется при публикации).
+# Trivy image analysis. One scan pass, SBOM derived from the report (reused when publishing).
 
 step::image_scan() {
   ci::require trivy

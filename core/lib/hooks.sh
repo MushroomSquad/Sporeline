@@ -1,9 +1,9 @@
 # shellcheck shell=bash
-# Хуки проекта.
+# Project hooks.
 #
-# Файлы:   <HCI_HOOKS_DIR>/<step>.pre.sh и <step>.post.sh (":" в имени шага заменяется на "-")
-# Inline:  HCI_<STEP>_PRE / HCI_<STEP>_POST (в .ci.yaml: build: { pre: "...", post: "..." })
-# Хуки выполняются в том же shell, что и шаг, и могут менять переменные окружения шага.
+# Files:   <HCI_HOOKS_DIR>/<step>.pre.sh and <step>.post.sh (":" in the step name becomes "-")
+# Inline:  HCI_<STEP>_PRE / HCI_<STEP>_POST (in .ci.yaml: build: { pre: "...", post: "..." })
+# Hooks run in the same shell as the step and can change the step's environment variables.
 
 hooks::_var() {
   local step="$1" phase="$2" name

@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Maven: settings.xml с зеркалом Nexus, truststore, общая команда MVN.
+# Maven: settings.xml with a Nexus mirror, truststore, the shared MVN command.
 
 MVN=()
 
@@ -52,16 +52,16 @@ rt::setup() {
 
 mvn::run() { log::cmd "${MVN[@]}" "$@"; }
 
-# Значение выражения Maven корневого модуля (project.version и т.п.).
+# Value of a Maven expression from the root module (project.version etc).
 mvn::eval() {
   "${MVN[@]}" -q -N -DforceStdout "-Dexpression=$1" \
     org.apache.maven.plugins:maven-help-plugin:3.5.1:evaluate 2>/dev/null
 }
 
-# Координаты всех модулей реактора: groupId:artifactId:version:packaging.
+# Coordinates of every reactor module: groupId:artifactId:version:packaging.
 mvn::coordinates() {
   "${MVN[@]}" -q -Dexec.executable=echo \
-    # Maven подставляет ${project.*} сам; shell не должен раскрывать.
+    # Maven substitutes ${project.*} itself; the shell must not expand it.
     # shellcheck disable=SC2016,SC2288
     '-Dexec.args=${project.groupId}:${project.artifactId}:${project.version}:${project.packaging}' \
     org.codehaus.mojo:exec-maven-plugin:3.5.0:exec 2>/dev/null | grep -E '^[^:[:space:]]+:[^:]+:[^:]+:[^:]+$'
@@ -73,7 +73,7 @@ mvn::set_version() {
     -DgenerateBackupPoms=false -DprocessAllModules=true
 }
 
-# Версия сборки: тег релиза или SNAPSHOT текущей версии pom.xml.
+# Build version: the release tag, or a SNAPSHOT of the current pom.xml version.
 mvn::apply_version() {
   ci::is_true "${HCI_MAVEN_SET_VERSION:-true}" || return 0
   local current

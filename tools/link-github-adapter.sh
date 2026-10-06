@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Готовит пути, которые ожидает GitHub (workflows/actions), из adapters/github.
-# Запускать из корня репозитория шаблонов перед публикацией тега.
+# Sets up the paths GitHub expects (workflows/actions) from adapters/github.
+# Run from the templates repository root before publishing a tag.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 mkdir -p "$root/.github/workflows" "$root/.github/actions/hci"

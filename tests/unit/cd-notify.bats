@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
-# Юнит-тесты cd:notify: cd_notify::safe_url (срезка userinfo/query/fragment),
-# cd_notify::attempt (2xx/4xx/5xx/сетевая ошибка через подменённый curl),
-# контракт "-K - вместо -H" для Authorization.
+# Unit tests for cd:notify: cd_notify::safe_url (stripping userinfo/query/fragment),
+# cd_notify::attempt (2xx/4xx/5xx/network error via a substituted curl),
+# the "-K - instead of -H" contract for Authorization.
 
 load helper
 
@@ -32,8 +32,8 @@ teardown() { hci_teardown_workdir; }
 }
 
 @test "safe_url: без схемы вообще — query-токен не утекает (регрессия code-review HIGH-1)" {
-  # Без "://" "${u%%://*}" вернула бы строку целиком, и query/userinfo не отрезались бы —
-  # curl принимает URL без схемы (подставляет http://), это рабочая конфигурация, не теоретическая.
+  # Without "://", "${u%%://*}" would return the whole string, and query/userinfo wouldn't be stripped —
+  # curl accepts a URL without a scheme (defaults to http://), this is a real configuration, not theoretical.
   local out; out="$(cd_notify::safe_url 'argo.example.com/hook?token=SECRET')"
   [[ "$out" != *SECRET* ]]
   [[ "$out" != *"?"* ]]
@@ -43,14 +43,14 @@ teardown() { hci_teardown_workdir; }
   [ "$(cd_notify::safe_url 'https://user:p@ss@host/hook')" = "https://host/hook" ]
 }
 
-# --- cd_notify::attempt: 2xx/4xx/5xx/сетевая ошибка -------------------------------------------
-# Функция читает curl_args/conf/safe из локалей вызывающего (динамический scope) и зовёт
-# настоящий curl — здесь curl подменён bash-функцией, отвечающей по env-переключателю
-# FAKE_CURL_MODE, без обращения к сети.
+# --- cd_notify::attempt: 2xx/4xx/5xx/network error -------------------------------------------
+# The function reads curl_args/conf/safe from the caller's locals (dynamic scope) and calls the
+# real curl — here curl is replaced by a bash function responding to the FAKE_CURL_MODE env
+# switch, without touching the network.
 
 _notify_fake_curl_setup() {
   curl() {
-    cat >/dev/null # поглощаем -K - stdin-конфиг
+    cat >/dev/null # consume the -K - stdin config
     case "${FAKE_CURL_MODE:-}" in
       2xx) printf 'body-ok\n200' ;;
       4xx) printf 'bad request body\n404' ;;
@@ -96,7 +96,7 @@ _notify_fake_curl_setup() {
   [[ "$output" == *"сетевая ошибка"* ]]
 }
 
-# --- Контракт "-K - вместо -H" для Authorization ----------------------------------------------
+# --- The "-K - instead of -H" contract for Authorization ----------------------------------------------
 
 @test "curl_args: при заданном токене Authorization идёт через -K конфиг (stdin), не -H в argv" {
   HCI_CD_NOTIFY_TOKEN=sekrit12345

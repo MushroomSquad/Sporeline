@@ -1,185 +1,200 @@
-# Решения и история дизайна
+[English](DECISIONS.md) | [Русский](DECISIONS.ru.md)
 
-Документ фиксирует договорённости из рабочей сессии по переписыванию CI-шаблонов
-(`templates-master`). Это не changelog коммитов, а **что решили и почему**, включая отвергнутые пути.
+# Decisions and Design History
 
-Связанные доки:
+This document records the agreements from the working session that rewrote the CI
+templates (`templates-master`). It's not a commit changelog, but a record of **what was
+decided and why**, including the paths that were rejected.
 
-- [pipeline.md](pipeline.md) — как кастомизировать логику пайплайна сейчас
-- [../README.md](../README.md) — быстрый старт
+Related docs:
+
+- [pipeline.md](pipeline.md) — how to customize pipeline logic today
+- [../README.md](../README.md) — quick start
 - [../adapters/README.md](../adapters/README.md) — GitLab / GitHub / Jenkins
 
 ---
 
-## 1. Исходный запрос
+## 1. The Original Request
 
-- Разобрать старые GitLab-шаблоны, убрать агентские инструкции (`AGENTS.md`, `.cursor/`).
-- Расширить языки (в т.ч. Python), оптимизировать, больше кастомизации и вариативности.
-- Greenfield OK; позже порт на GitHub / Jenkins.
-- Ядро — bash (`bash_lib` → `core/`), запекается в образы (`/opt/ci`).
-- Платформенный контракт артефактов можно пересмотреть.
+- Take apart the old GitLab templates, remove agent instructions (`AGENTS.md`, `.cursor/`).
+- Expand language support (incl. Python), optimize, add more customization and
+  variability.
+- Greenfield is fine; GitHub/Jenkins ports to follow later.
+- The core is bash (`bash_lib` → `core/`), baked into images (`/opt/ci`).
+- The platform's artifact contract is open for revision.
 
-Позже: довести адаптеры, объяснить кастомизацию пайплайна; вопросы про стадии в UI,
-ветвление, retry, логические операторы → попытка «полноценного конструктора» → откат.
+Later: finish the adapters, explain pipeline customization; questions about UI stages,
+branching, retry, logical operators → an attempt at a "full construction kit" → rolled
+back.
 
 ---
 
-## 2. Архитектура ядра (принято)
+## 2. Core Architecture (Accepted)
 
-| Решение | Выбор | Зачем |
+| Decision | Choice | Why |
 |---------|--------|--------|
-| Язык ядра | Bash CLI `ci <step>` | Уже был bash в YAML; переносится в образ; без отдельного рантайма Go/Python в каждом job |
-| Доставка ядра | Образ с `/opt/ci`, тег `…-ci{VERSION}` | GitLab `include: project` не тянет соседние скрипты |
-| Префикс env | `HCI_*` (не `CI_*`) | Не конфликтовать с переменными GitLab |
-| Конфиг | CLI → env → `.ci.yaml` → runtime defaults → `core/defaults.env` | Предсказуемый приоритет |
-| Мягкий отказ | exit **78** | Тесты/линтеры/сканы не валят пайплайн при `strict=false`; адаптер мапит в allow_failure / warning / unstable |
-| Skip | exit **86** (где используется) | Явный пропуск шага |
-| Профили | `HCI_PROFILE` (напр. maven/quarkus) | Вариативность внутри рантайма |
-| Манифест | `hci-artifacts/artifacts.json` v2 | Единый контракт артефактов |
-| Retry в ядре | `retry.sh` для сети/push | Не путать с job-level retry CI |
+| Core language | Bash CLI `ci <step>` | Bash was already in the YAML; it ships inside the image; no need for a separate Go/Python runtime in every job |
+| Core delivery | An image with `/opt/ci`, tag `…-ci{VERSION}` | GitLab's `include: project` doesn't pull in neighboring scripts |
+| Env prefix | `HCI_*` (not `CI_*`) | Avoid colliding with GitLab's own variables |
+| Config | CLI → env → `.ci.yaml` → runtime defaults → `core/defaults.env` | Predictable priority |
+| Soft failure | exit **78** | Tests/linters/scans don't fail the pipeline at `strict=false`; adapters map it to allow_failure / warning / unstable |
+| Skip | exit **86** (where used) | An explicit step skip |
+| Profiles | `HCI_PROFILE` (e.g. maven/quarkus) | Variability within a runtime |
+| Manifest | `hci-artifacts/artifacts.json` v2 | A single artifact contract |
+| Core-level retry | `retry.sh` for network/push | Not to be confused with CI's own job-level retry |
 
-**Адаптеры** — тонкие: только граф джобов и вызов `ci <step>`.
+**Adapters** are thin: only the job graph and the `ci <step>` call.
 
-- GitLab: CI/CD components в `templates/`
+- GitLab: CI/CD components in `templates/`
 - GitHub: composite + reusable workflow
 - Jenkins: shared library `hci` / `hciPipeline`
 
 ---
 
-## 3. Генератор `tools/generate.py` (принято, узкая роль)
+## 3. The `tools/generate.py` Generator (Accepted, Narrow Role)
 
-**Зачем есть:** не копипастить почти одинаковые GitLab-компоненты на ~10 рантаймов
-(различия — версии образов, cache, junit/coverage, список шагов из `meta.yaml`).
-Плюс: e2e-матрица, wrappers образов, `schema.yaml` (каталог flow/runtime).
+**Why it exists:** to avoid copy-pasting nearly identical GitLab components across ~10
+runtimes (differences are image versions, cache, junit/coverage, the step list from
+`meta.yaml`). Plus: the e2e matrix, image wrappers, `schema.yaml` (a flow/runtime
+catalog).
 
-**Зачем не нужен:** логика пайплайна (ветки, when, retry, OR/AND). На это генератор
-не претендует.
+**Why it's not needed for:** pipeline logic (branches, `when`, retry, OR/AND). The
+generator makes no claim on this.
 
-Если устраивает ручной YAML на каждый рантайм — генератор можно удалить; на модель
-«логика в проекте» это не влияет.
+If hand-written YAML per runtime is acceptable, the generator can be removed; that
+doesn't change the "logic lives in the project" model.
 
-Руками `templates/*.yml` не править при живом генераторе — только `meta.yaml` + `generate.py`.
+`templates/*.yml` is never hand-edited while the generator is alive — only `meta.yaml` +
+`generate.py`.
 
 ---
 
-## 4. Два слоя кастомизации (принято)
+## 4. Two Customization Layers (Accepted)
 
-Разделить то, что часто смешивали:
+Separating what used to be conflated:
 
-| Слой | Где | Что |
+| Layer | Where | What |
 |------|-----|-----|
-| **Поведение шага** | `.ci.yaml`, `HCI_*_CMD`, hooks, `strict` | *как* собирать / тестировать / публиковать |
-| **Логика пайплайна** | YAML/Groovy **проекта** | *когда* джоб есть: ветки, sources, changes, retry, manual, OR/AND |
+| **Step behavior** | `.ci.yaml`, `HCI_*_CMD`, hooks, `strict` | *how* to build / test / publish |
+| **Pipeline logic** | the **project's** YAML/Groovy | *when* a job exists: branches, sources, changes, retry, manual, OR/AND |
 
-Тумблеры шагов в component inputs (`test: false`, `sonar: true`) — удобство, не замена `rules`.
-
----
-
-## 5. Логика пайплайна = YAML проекта (принято)
-
-Приоритет: **максимальная кастомизируемость и настраиваемость**.
-
-- Конструктор логики — **обычный GitLab CI YAML** в репозитории сервиса
-  (`workflow:rules`, override `build`/`test`/`image:publish` с своими `rules`/`retry`/`needs`).
-- GitHub — `on:` / `if:` в вызывающем workflow (или форк `pipeline.yml`).
-- Jenkins — `when {}`, `retry()`, `input` в Jenkinsfile / Groovy.
-
-Дефолт в шаблоне минимальный: enabled + `service_type` + publish по тегу.
-Всё сложнее — override в проекте. Подробности: [pipeline.md](pipeline.md).
-
-**Шаблоны + reuse** повышают кастомизацию только если шаблон **тонкий**
-(переиспользуются шаги/`ci`, а не монолитный «умный» пайплайн). Толстый шаблон
-с зашитой политикой — кастомизацию режет.
+Step toggles in component inputs (`test: false`, `sonar: true`) are a convenience, not a
+replacement for `rules`.
 
 ---
 
-## 6. Отвергнуто / откатано
+## 5. Pipeline Logic = Project YAML (Accepted)
 
-### 6.1. «Полноценный конструктор» внутри генератора
+Priority: **maximum customizability and configurability**.
 
-Было сделано и **снято**:
+- The logic construction kit is **plain GitLab CI YAML** in the service repository
+  (`workflow:rules`, overriding `build`/`test`/`image:publish` with your own
+  `rules`/`retry`/`needs`).
+- GitHub — `on:` / `if:` in the calling workflow (or a fork of `pipeline.yml`).
+- Jenkins — `when {}`, `retry()`, `input` in the Jenkinsfile / Groovy.
 
-- inputs: `branches`, `except_branches`, `pipeline_sources`, `changes`, `job_retry`, `publish_mode`
-- «умный» `rules()` с `$HCI_BRANCHES` / OR-списком под `publish_mode`
-- блок `constructor` в `schema.yaml` под виджеты UI
-- паритет этих пресетов в GitHub/Jenkins
+The template's default is minimal: enabled + `service_type` + publish on tag. Anything
+more complex is an override in the project. Details: [pipeline.md](pipeline.md).
 
-**Почему отвергнуто:** это не YAML-конструктор, а Python + промежуточные переменные;
-кастомизация ограничена пресетами; непонятно «какой UI».
-
-### 6.2. Платформенный веб-UI / «витрина»
-
-`schema.yaml` как контракт для рисования формы в платформе **не цель** текущего дизайна.
-Не проектируем и не обещаем UI. Каталог `schema.yaml` может оставаться для внешних
-потребителей flow/runtime — без блока constructor и без привязки к «конструктору».
-
-### 6.3. Свободный DSL выражений в inputs
-
-Не делаем: пользовательские `||`/`if`-строки через inputs компонента.
-Логика — нативный YAML CI / Groovy.
-
-### 6.4. Job-retry и branch-policy в bash-ядре
-
-Политика «на каких ветках бежать» и retry джоба — зона CI YAML/Groovy, не `core/`.
-В ядре остаётся только сетевой `retry.sh` и нормализация `HCI_BRANCH` / `HCI_IS_MR` как env.
+**Templates + reuse** only increase customization if the template is **thin** (steps/`ci`
+are reused, not a monolithic "smart" pipeline). A thick template with baked-in policy cuts
+customization instead.
 
 ---
 
-## 7. Старый мир → новый (миграция смыслов)
+## 6. Rejected / Rolled Back
 
-| Было | Стало |
+### 6.1. A "Full Construction Kit" Inside the Generator
+
+This was built, then **removed**:
+
+- inputs: `branches`, `except_branches`, `pipeline_sources`, `changes`, `job_retry`,
+  `publish_mode`
+- a "smart" `rules()` with `$HCI_BRANCHES` / an OR-list keyed on `publish_mode`
+- a `constructor` block in `schema.yaml` for UI widgets
+- parity for these presets across GitHub/Jenkins
+
+**Why rejected:** this isn't a YAML construction kit, it's Python plus intermediate
+variables; customization is limited to presets; and it's unclear what UI would even
+consume it.
+
+### 6.2. A Platform Web UI / "Showcase"
+
+`schema.yaml` as a contract for drawing a form in some platform is **not a goal** of the
+current design. We're not designing or promising a UI. The `schema.yaml` catalog may
+still exist for external flow/runtime consumers — without a constructor block and without
+being tied to any "construction kit".
+
+### 6.3. A Free-Form Expression DSL in Inputs
+
+Not doing this: user-supplied `||`/`if` strings via component inputs. Logic belongs in
+native CI YAML / Groovy.
+
+### 6.4. Job Retry and Branch Policy in the Bash Core
+
+The policy of "which branches this runs on" and job-level retry belong to CI YAML/Groovy,
+not `core/`. The core only keeps network-level `retry.sh` and normalizes `HCI_BRANCH` /
+`HCI_IS_MR` as env vars.
+
+---
+
+## 7. Old World → New World (Meaning Migration)
+
+| Was | Became |
 |------|--------|
 | `include: project: … Maven.gitlab-ci.yml` | `include: component: …/maven@tag` |
-| `STAGE_TEST` и др. | input `test:` / override `rules` |
+| `STAGE_TEST` and others | the `test:` input / a `rules` override |
 | `SERVICE_TYPE` | `service_type` |
 | `JDK_VERSION` / runtime version vars | `runtime_version` |
-| Логика в кусках `default/` + `buildah/` + runtime YAML | граф в component; поведение в `core/` |
-| Inline shell в `script:` | `ci <step>` из образа |
+| Logic split across `default/` + `buildah/` + runtime YAML chunks | a graph in the component; behavior in `core/` |
+| Inline shell in `script:` | `ci <step>` from the image |
 
-Автомиграцию всех потребительских `.gitlab-ci.yml` не делали — только смысл маппинга.
+No automatic migration of consumer `.gitlab-ci.yml` files was done — only the meaning
+mapping.
 
 ---
 
-## 8. Что в репозитории сейчас (снимок модели)
+## 8. What's in the Repository Now (Model Snapshot)
 
 ```
 core/                 # ci, lib, steps, runtimes/*/meta.yaml
-templates/            # GitLab components (из generate.py)
+templates/            # GitLab components (from generate.py)
 adapters/
-  gitlab/             # доки; сами yml в templates/
+  gitlab/             # docs; the yml files live in templates/
   github/             # action + pipeline.yml
   jenkins/            # vars/hci.groovy, hciPipeline.groovy
   common/run-step.sh
-tools/generate.py     # DRY рантаймов + e2e + wrappers + schema
-docs/pipeline.md      # как писать логику в проекте
-docs/DECISIONS.md     # этот файл
-images/               # Containerfile'ы, wrappers CI
+tools/generate.py     # DRY for runtimes + e2e + wrappers + schema
+docs/pipeline.md      # how to write logic in the project
+docs/DECISIONS.md     # this file
+images/               # Containerfiles, CI wrappers
 tests/                # bats, fixtures, e2e include
 ```
 
 ---
 
-## 9. Краткие ответы на вопросы сессии
+## 9. Short Answers to Session Questions
 
-**«В веб-интерфейсе не отображаются стадии?»**  
-В шаблонах стадии GitLab есть (`stage_*` inputs). Отдельного UI конструктора нет и не цель.
+**"Stages don't show up in the web UI?"**
+The templates do have GitLab stages (`stage_*` inputs). There's no separate constructor
+UI, and that's not a goal.
 
-**«Ветвление / повторы / логические операторы?»**  
-В проектном YAML (или Groovy). Не в генераторе.
+**"Branching / retries / logical operators?"**
+In the project's YAML (or Groovy). Not in the generator.
 
-**«Зачем генератор?»**  
-Только DRY почти одинаковых runtime-компонентов и вспомогательная генерация.
-Не для логики пайплайна.
+**"Why does the generator exist?"**
+Only to DRY up nearly-identical runtime components and for auxiliary generation. Not for
+pipeline logic.
 
-**«Reuse темплейтов повысит кастомизацию?»**  
-Только при тонких шаблонах и явных точках расширения. Иначе — наоборот.
+**"Would template reuse increase customization?"**
+Only with thin templates and explicit extension points. Otherwise — the opposite.
 
 ---
 
-## 10. Принципы на дальше
+## 10. Principles Going Forward
 
-1. Тонкий адаптер, толстое ядро шагов.
-2. Логика пайплайна — в языке CI пользователя (YAML / Groovy).
-3. Не прятать политику запуска за «умными» inputs.
-4. Не обещать платформенный UI из этого репозитория.
-5. Генератор — опциональное удобство, не источник правды для rules.
+1. Thin adapter, thick step core.
+2. Pipeline logic lives in the user's CI language (YAML / Groovy).
+3. Don't hide run policy behind "smart" inputs.
+4. Don't promise a platform UI from this repository.
+5. The generator is an optional convenience, not the source of truth for rules.

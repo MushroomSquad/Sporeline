@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Публикация библиотеки в Maven-репозиторий (releases по тегу, snapshots при HCI_PUBLISH_SNAPSHOTS=true).
+# Publishes the library to a Maven repository (releases from a tag, snapshots when HCI_PUBLISH_SNAPSHOTS=true).
 rt::publish() {
   local kind=push url goals=() g a v p published=0
   if ! naming::is_release; then

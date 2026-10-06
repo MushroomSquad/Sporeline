@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Helm-чарт: lint + kubeconform; публикация в Nexus (helm-hosted) или OCI-реестр.
+# Helm chart: lint + kubeconform; publishing to Nexus (helm-hosted) or an OCI registry.
 
 helm::chart() {
   ci::yaml_to_json "$HCI_HELM_CHART_DIR/Chart.yaml" | jq -r ".$1 // empty"

@@ -1,11 +1,11 @@
 # shellcheck shell=bash
-# Имена и версии артефактов.
+# Artifact names and versions.
 
 naming::is_release() {
   [[ -n "${HCI_TAG:-}" ]] || ci::is_true "${HCI_RELEASE:-false}"
 }
 
-# Версия релиза: HCI_VERSION, иначе тег. Для не-релизных сборок — 0.0.0-<ветка>.<sha>.
+# Release version: HCI_VERSION, else the tag. For non-release builds — 0.0.0-<branch>.<sha>.
 naming::version() {
   local v="${HCI_VERSION:-}"
   if [[ -z "$v" && -n "${HCI_TAG:-}" ]]; then
@@ -20,7 +20,7 @@ naming::version() {
   printf '%s' "$v"
 }
 
-# Репозиторий образа без хоста: group/project или <namespace>/<code_hash>.
+# Image repository without the host: group/project or <namespace>/<code_hash>.
 naming::image_repo() {
   if [[ -n "${HCI_IMAGE_NAME:-}" ]]; then
     printf '%s' "${HCI_IMAGE_NAME,,}"
@@ -31,7 +31,7 @@ naming::image_repo() {
   fi
 }
 
-# Основной тег образа.
+# Main image tag.
 naming::image_tag() {
   local core
   if naming::is_release; then

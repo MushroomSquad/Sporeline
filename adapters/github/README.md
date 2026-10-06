@@ -1,21 +1,23 @@
-# GitHub Actions — адаптер
+[English](README.md) | [Русский](README.ru.md)
 
-Тонкий слой: job вызывает `ci <step>`. Логика (`on:`, `if:`) — в **вашем** workflow.
-См. [docs/pipeline.md](../../docs/pipeline.md).
+# GitHub Actions Adapter
 
-## Состав
+A thin layer: a job calls `ci <step>`. Logic (`on:`, `if:`) lives in **your** workflow.
+See [docs/pipeline.md](../../docs/pipeline.md).
 
-| Файл | Назначение |
+## Contents
+
+| File | Purpose |
 |------|------------|
-| `action.yml` | Composite action на один шаг |
-| `pipeline.yml` | Reusable workflow (тонкий DAG) |
+| `action.yml` | A composite action for a single step |
+| `pipeline.yml` | A reusable workflow (thin DAG) |
 | `../common/run-step.sh` | Soft-exit **78** → warning |
 
 ```bash
 bash tools/link-github-adapter.sh
 ```
 
-## Reusable workflow
+## Reusable Workflow
 
 ```yaml
 name: CI
@@ -38,11 +40,13 @@ jobs:
     secrets: inherit
 ```
 
-Нужны другие условия publish — скопируйте `pipeline.yml` и правьте `if:` как обычный Actions YAML.
+Need other publish conditions — copy `pipeline.yml` and edit `if:` like plain Actions
+YAML.
 
-## Гранулярные компоненты
+## Granular Components
 
-Для полностью кастомного графа из отдельных компонентов см. [Уровень 3](../../docs/pipeline.md#уровень-3-свой-граф-из-отдельных-компонентов):
+For a fully custom graph built from individual components, see
+[Level 3](../../docs/pipeline.md#level-3-a-custom-graph-from-individual-components):
 
 ```yaml
 jobs:

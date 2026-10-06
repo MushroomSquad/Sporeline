@@ -1,8 +1,8 @@
 #!/usr/bin/env bats
-# Юнит-тесты cd:bump: классификатор push-ошибок (с якорем HTTP 50[0-9] против
-# ложного срабатывания на байтовый прогресс пуша), три yq-гейта apply_commit
-# (включая регрессию на YAML merge-key `<<: *def` -> `!!merge <<: *def`),
-# strenv-инъекция, askpass-контракт, URL-гейт на credential в HTTPS.
+# Unit tests for cd:bump: the push-error classifier (anchored on HTTP 50[0-9] against
+# false-positives on push byte-progress output), the three apply_commit yq gates
+# (including the regression on the YAML merge-key `<<: *def` -> `!!merge <<: *def`),
+# strenv injection, the askpass contract, the HTTPS credential-in-URL gate.
 
 load helper
 
@@ -14,8 +14,8 @@ setup() {
 }
 teardown() { hci_teardown_workdir; }
 
-# cd_bump::apply_commit баз vars (dir/ref/HCI_CD_YAML_FILE/HCI_CD_YAML_PATH) создаёт baseline-коммит
-# с простым Deployment-манифестом в $WORKDIR (уже git-репозиторий из hci_setup_workdir).
+# cd_bump::apply_commit base vars (dir/ref/HCI_CD_YAML_FILE/HCI_CD_YAML_PATH) create a baseline commit
+# with a simple Deployment manifest in $WORKDIR (already a git repo from hci_setup_workdir).
 _bump_baseline() {
   cat > "$WORKDIR/app.yaml" <<'EOF'
 apiVersion: apps/v1
@@ -49,9 +49,9 @@ EOF
 }
 
 @test "classify_push_error: байтовый прогресс '503 bytes' не матчится как HTTP 50x (регрессия якоря)" {
-  # Живой пример критика: прогресс пуша печатает "503 bytes", голый 50[0-9] ловил бы это как
-  # retryable-plain. Якорь "HTTP 50[0-9]"/"error: RPC failed" не должен сработать на этот текст —
-  # ни один из двух классов маркеров не совпадает, функция обязана вернуть fatal.
+  # Critic's live example: push progress prints "503 bytes" — a bare 50[0-9] would catch this as
+  # retryable-plain. The anchor "HTTP 50[0-9]"/"error: RPC failed" must not fire on this text —
+  # neither marker class matches, the function must return fatal.
   printf '%s\n' \
     "Writing objects: 100% (3/3), 503 bytes | 503.00 KiB/s, done." \
     "remote: Permission denied" \
@@ -69,7 +69,7 @@ EOF
   [ "$(cd_bump::classify_push_error "$HCI_TMP/err")" = "fatal" ]
 }
 
-# --- cd_bump::apply_commit: три yq-гейта ---------------------------------------------------
+# --- cd_bump::apply_commit: the three yq gates ---------------------------------------------------
 
 @test "apply_commit: happy path — single-doc YAML, меняется ровно одна строка" {
   _bump_baseline
@@ -80,7 +80,7 @@ EOF
 
   run cd_bump::apply_commit
   [ "$status" -eq 0 ]
-  # закоммичено: ничего не осталось в staged diff, HEAD содержит новый ref
+  # committed: nothing left in the staged diff, HEAD contains the new ref
   git -C "$dir" diff --cached --quiet
   [[ "$(git -C "$dir" show HEAD:app.yaml)" == *"image: registry.local/demo:2.0.0"* ]]
   [ "$(git -C "$dir" log --oneline | wc -l)" -eq 2 ]
@@ -92,7 +92,7 @@ EOF
   dir="$WORKDIR"
   ref="registry.local/demo:2.0.0"
   HCI_CD_YAML_FILE="app.yaml"
-  # индекс массива вне диапазона — типовая опечатка из живого эксплойта критика
+  # array index out of range — a typical typo from the critic's live exploit
   HCI_CD_YAML_PATH=".spec.template.spec.containers[5].image"
 
   run cd_bump::apply_commit
@@ -104,9 +104,9 @@ EOF
 }
 
 @test "apply_commit: гейт 3 — yq-переписывание YAML merge-key (<<: *def -> !!merge) отклоняется по numstat" {
-  # Живой эксплойт критика раунда 5: yq корректно проставляет image, но заодно переписывает
-  # соседний merge-key якорь. Гейты 1+2 (путь существует, значение верно) это пропускают —
-  # ловит только гейт 3 (git diff --numstat != "1\t1\t").
+  # Critic's live exploit from round 5: yq correctly sets the image, but also rewrites the
+  # neighboring merge-key anchor along the way. Gates 1+2 (path exists, value is correct) miss
+  # this — only gate 3 catches it (git diff --numstat != "1\t1\t").
   cat > "$WORKDIR/app.yaml" <<'EOF'
 defs:
   commonLabels: &def
@@ -134,9 +134,9 @@ EOF
 
   run cd_bump::apply_commit
   [ "$status" -ne 0 ]
-  # падение именно по причине numstat (гейт 3), не по какой-то другой — проверяем точный текст
+  # confirm it failed specifically due to numstat (gate 3), not something else — check exact text
   [[ "$output" == *"не только строку образа"* ]]
-  # ничего не закоммичено и не застейджено из-за падения
+  # nothing committed or staged because of the failure
   git -C "$dir" diff --cached --quiet
   [ "$(git -C "$dir" log --oneline | wc -l)" -eq 1 ]
 }
@@ -152,21 +152,21 @@ EOF
   [ "$status" -eq 0 ]
   [ "$(git -C "$dir" log --oneline | wc -l)" -eq 2 ]
 
-  # второй вызов с тем же ref: working tree уже соответствует, numstat пуст -> гейт 3 проходит
-  # по ветке "-z", git add ничего не меняет, diff --cached --quiet истинен -> return 0 без коммита
+  # second call with the same ref: the working tree already matches, numstat is empty -> gate 3
+  # passes via the "-z" branch, git add changes nothing, diff --cached --quiet is true -> return 0, no commit
   run cd_bump::apply_commit
   [ "$status" -eq 0 ]
   [[ "$output" == *"уже актуально"* ]]
   [ "$(git -C "$dir" log --oneline | wc -l)" -eq 2 ]
 }
 
-# --- strenv-инъекция -----------------------------------------------------------------------
+# --- strenv injection -----------------------------------------------------------------------
 
 @test "apply_commit: strenv(REF) не даёт инъекцию — адверсариальное значение не создаёт лишних ключей" {
   _bump_baseline
   dir="$WORKDIR"
-  # Живой эксплойт критика: значение с кавычкой и yq-выражением внутри. При интерполяции
-  # "\"$ref\"" вместо strenv(REF) это сломало бы само выражение yq и создало бы ключ .pwned.
+  # Critic's live exploit: a value containing a quote and a yq expression. Interpolating it as
+  # "\"$ref\"" instead of strenv(REF) would break the yq expression itself and create a .pwned key.
   ref='x" , .pwned = "yes'
   HCI_CD_YAML_FILE="app.yaml"
   HCI_CD_YAML_PATH=".spec.template.spec.containers[0].image"
@@ -177,7 +177,7 @@ EOF
   [[ "$(yq '.spec.template.spec.containers[0].image' "$WORKDIR/app.yaml")" == "$ref" ]]
 }
 
-# --- askpass-контракт ------------------------------------------------------------------------
+# --- askpass contract ------------------------------------------------------------------------
 
 @test "auth: askpass-скрипт — Username и Password дают разные значения, токен не светится в username-вызове" {
   export HCI_CD_GIT_USER=myuser HCI_CD_GIT_TOKEN=supersecrettoken
@@ -194,22 +194,22 @@ EOF
   [[ "$u" != *"supersecrettoken"* ]]
 }
 
-# --- URL-гейт на credential в HTTPS ----------------------------------------------------------
+# --- HTTPS credential-in-URL gate ----------------------------------------------------------
 
 @test "URL-гейт: https://user:pass@host отклоняется, ssh://git@host:порт — нет" {
   local url
   url='https://user:pass@host/group/repo.git'
-  [[ "$url" == http*://*@* ]]     # гейт должен сработать (die в реальном коде)
+  [[ "$url" == http*://*@* ]]     # the gate must trigger (die in real code)
 
   url='ssh://git@host:2222/group/repo.git'
-  [[ "$url" != http*://*@* ]]     # нестандартный SSH-порт с userinfo — легитимен, не отклоняется
+  [[ "$url" != http*://*@* ]]     # non-standard SSH port with userinfo — legitimate, not rejected
 
   url='https://host/group/repo.git'
-  [[ "$url" != http*://*@* ]]     # обычный HTTPS без credential — тоже проходит
+  [[ "$url" != http*://*@* ]]     # plain HTTPS without a credential — also passes
 }
 
 @test "URL-гейт: HTTPS:// в верхнем регистре тоже отклоняется (регрессия code-review HIGH-2)" {
   local url='HTTPS://tok@127.0.0.1/x.git'
-  [[ "$url" != http*://*@* ]]     # без ${url,,} голый паттерн бы пропустил — это и есть баг
-  [[ "${url,,}" == http*://*@* ]] # с нормализацией регистра гейт срабатывает верно
+  [[ "$url" != http*://*@* ]]     # without ${url,,} the bare pattern would let this through — that's the bug
+  [[ "${url,,}" == http*://*@* ]] # with case normalization, the gate fires correctly
 }

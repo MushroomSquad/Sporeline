@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Kaspersky Container Security: сканирование OCI layout образа сканером KCS.
+# Kaspersky Container Security: scans an image's OCI layout with the KCS scanner.
 
 step::kcs() {
   [[ "$HCI_SERVICE_TYPE" != "library" ]] || ci::skip "service_type=library"

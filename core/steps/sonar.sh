@@ -1,8 +1,8 @@
 # shellcheck shell=bash
-# SonarQube. Рантайм может:
-#   rt::sonar_params  — печатать дополнительные -Dkey=value (по одному на строку);
-#   rt::sonar ARGS... — запустить анализ своим инструментом (mvn sonar:sonar, gradle sonar, ...).
-# Иначе используется sonar-scanner CLI.
+# SonarQube. A runtime may provide:
+#   rt::sonar_params  — prints extra -Dkey=value lines (one per line);
+#   rt::sonar ARGS... — runs the analysis with its own tool (mvn sonar:sonar, gradle sonar, ...).
+# Otherwise the sonar-scanner CLI is used.
 
 step::sonar() {
   [[ -n "${HCI_SONAR_HOST_URL:-}" ]] || log::die "Не задан HCI_SONAR_HOST_URL (SONAR_HOST)"

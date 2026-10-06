@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Публикация образа из OCI layout: skopeo copy --all, дополнительные теги, аттестация SBOM, подпись, манифест.
+# Publishes an image from an OCI layout: skopeo copy --all, extra tags, SBOM attestation, signing, manifest.
 
 step::image_publish() {
   ci::require skopeo

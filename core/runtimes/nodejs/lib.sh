@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Node.js: npm / yarn / pnpm через corepack. NPM_CONFIG_USERCONFIG в HCI_TMP.
+# Node.js: npm / yarn / pnpm via corepack. NPM_CONFIG_USERCONFIG lives in HCI_TMP.
 
 node::pm() {
   local forced="${HCI_NODE_PACKAGE_MANAGER:-auto}"

@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Анализ зависимостей по исходникам и lock-файлам (Trivy fs). Не требует сборки.
+# Dependency analysis over sources and lock files (Trivy fs). Doesn't require a build.
 
 step::deps_scan() {
   ci::require trivy

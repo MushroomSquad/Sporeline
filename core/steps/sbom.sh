@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# SBOM образа (CycloneDX). Используется, если шаг image:scan выключен.
+# Image SBOM (CycloneDX). Used when the image:scan step is disabled.
 
 sbom::image() {
   local oci="$HCI_WORKDIR_ABS/$HCI_OCI_DIR" args=()

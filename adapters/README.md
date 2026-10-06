@@ -1,17 +1,23 @@
-# Адаптеры CI
+[English](README.md) | [Русский](README.ru.md)
 
-Один контракт для всех систем: **`ci <step>`**. Адаптер описывает только граф джобов и передаёт `HCI_*`.
+# CI Adapters
 
-| Адаптер | Артефакты | Документация |
+One contract for every system: **`ci <step>`**. An adapter only describes the job graph
+and passes `HCI_*` through.
+
+| Adapter | Artifacts | Docs |
 |---------|-----------|--------------|
 | **GitLab** | `templates/*.yml` (CI/CD components) | [gitlab/README.md](gitlab/README.md) |
 | **GitHub Actions** | `github/action.yml`, `github/pipeline.yml` | [github/README.md](github/README.md) |
 | **Jenkins** | `jenkins/vars/hci.groovy`, `hciPipeline.groovy` | [jenkins/README.md](jenkins/README.md) |
 
-Общая обёртка soft-exit: [common/run-step.sh](common/run-step.sh) (код **78** → warning / unstable).
+Shared soft-exit wrapper: [common/run-step.sh](common/run-step.sh) (code **78** →
+warning / unstable).
 
-Нормализация переменных платформы — `core/lib/ci-env.sh` (`gitlab` / `github` / `jenkins` / `local`).
+Platform variable normalization — `core/lib/ci-env.sh` (`gitlab` / `github` / `jenkins` /
+`local`).
 
-Логика пайплайна (ветки, retry, when): [docs/pipeline.md](../docs/pipeline.md) — YAML проекта / Jenkinsfile.
+Pipeline logic (branches, retry, when): [docs/pipeline.md](../docs/pipeline.md) — the
+project's YAML / Jenkinsfile.
 
-Решения и история дизайна: [docs/DECISIONS.md](../docs/DECISIONS.md).
+Decisions and design history: [docs/DECISIONS.md](../docs/DECISIONS.md).

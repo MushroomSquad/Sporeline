@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Solar appScreener: архив исходников -> scan/start -> ожидание с таймаутом -> отчёт.
+# Solar appScreener: source archive -> scan/start -> wait with a timeout -> report.
 
 appscreener::api() {
   local method="$1" path="$2"

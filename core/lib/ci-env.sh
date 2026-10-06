@@ -1,18 +1,18 @@
 # shellcheck shell=bash
-# Нормализация окружения CI-системы в нейтральные переменные HCI_*.
+# Normalizes the CI system's environment into neutral HCI_* variables.
 #
 # HCI_CI              gitlab | github | jenkins | local
-# HCI_TAG             тег релиза (пусто, если сборка не по тегу)
-# HCI_REF             имя ветки или тега
-# HCI_BRANCH          имя ветки (пусто для тега)
+# HCI_TAG             release tag (empty if the build isn't from a tag)
+# HCI_REF             branch or tag name
+# HCI_BRANCH          branch name (empty for a tag)
 # HCI_SHA, HCI_SHORT_SHA
 # HCI_PROJECT_PATH    group/subgroup/project
 # HCI_PROJECT_NAME    project
-# HCI_PROJECT_NAMESPACE  корневая группа
+# HCI_PROJECT_NAMESPACE  root group
 # HCI_PROJECT_URL
 # HCI_PIPELINE_ID, HCI_JOB_ID
-# HCI_IS_MR           true, если сборка запущена для merge/pull request
-# HCI_ROOT            корень репозитория в рабочей среде
+# HCI_IS_MR           true if the build was triggered for a merge/pull request
+# HCI_ROOT            repository root in the working environment
 
 ci_env::_set() {
   local name="$1" value="$2"
