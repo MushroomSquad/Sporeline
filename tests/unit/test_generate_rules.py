@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit-тесты минимального rules() из tools/generate.py и гранулярных templates/<category>-<step>.yml."""
+"""Unit tests for the minimal rules() in tools/generate.py and for granular templates/<category>-<step>.yml."""
 
 from __future__ import annotations
 
@@ -16,8 +16,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 import generate as g  # noqa: E402
 
 TEMPLATES = ROOT / "templates"
-# Имена бандлов — только чтение списка рантаймов из meta.yaml (load_runtimes), без обращения
-# к логике генерации самих гранулярных файлов, чтобы не проверять generate.py сам на себе.
+# Bundle names — only reads the runtime list from meta.yaml (load_runtimes), without touching
+# the generation logic of the granular files themselves, so generate.py isn't tested against itself.
 BUNDLE_NAMES = set(g.load_runtimes()) | {"image", "helm", "analyze"}
 GRANULAR_FILES = sorted(p for p in TEMPLATES.glob("*.yml") if p.stem not in BUNDLE_NAMES)
 
@@ -30,9 +30,9 @@ CONTROL_INPUT_NAMES = {"needs", "rules", "when", "retry"}
 
 
 def _load(path: Path) -> tuple[str, list]:
-    """Сырой текст + 2 YAML-документа файла (spec, job), прочитанные напрямую с диска —
-    без вызова internal-функций generate.py, чтобы баг в логике генератора не мог
-    одновременно испортить и файл, и тест, который его проверяет."""
+    """Raw text + the file's 2 YAML documents (spec, job), read straight from disk —
+    without calling generate.py's internal functions, so a bug in the generator's logic
+    can't corrupt both the file and the test that checks it at the same time."""
     text = path.read_text()
     return text, list(yaml.safe_load_all(text))
 
@@ -69,8 +69,8 @@ class RulesTest(unittest.TestCase):
         self.assertNotIn("publish_mode", base)
         self.assertNotIn("job_retry", base)
 
-        # Гранулярные файлы не должны реинтродьюсить "конструкторский" паттерн
-        # (needs/rules/when/retry как управляющие inputs) — docs/DECISIONS.md §6.1.
+        # Granular files must not reintroduce the "constructor" pattern
+        # (needs/rules/when/retry as control inputs) — docs/DECISIONS.md §6.1.
         for path in GRANULAR_FILES:
             with self.subTest(file=path.name):
                 _, (spec_doc, _) = _load(path)
@@ -79,11 +79,11 @@ class RulesTest(unittest.TestCase):
 
 
 class GranularFilesTest(unittest.TestCase):
-    """Структурные и ценностные проверки всех 67 templates/<category>-<step>.yml."""
+    """Structural and value checks across all 67 templates/<category>-<step>.yml."""
 
     def test_discovery_sane(self):
-        # Если глоб внезапно ничего не найдёт, остальные тесты в этом классе молча
-        # пройдут на пустом списке — явно проверяем, что список не пуст.
+        # If the glob suddenly finds nothing, the rest of this class's tests would
+        # silently pass on an empty list — explicitly check the list isn't empty.
         self.assertGreater(len(GRANULAR_FILES), 0)
 
     def test_count_exactly_67(self):
@@ -113,10 +113,10 @@ class GranularFilesTest(unittest.TestCase):
         for path in GRANULAR_FILES:
             with self.subTest(file=path.name):
                 _, docs = _load(path)
-                self.assertEqual(len(docs), 2, f"{path.name}: ожидалось 2 YAML-документа")
+                self.assertEqual(len(docs), 2, f"{path.name}: expected 2 YAML documents")
                 spec_doc, job_doc = docs
                 self.assertIn("spec", spec_doc)
-                self.assertEqual(len(job_doc), 1, f"{path.name}: ожидался один джоб, получено {list(job_doc)}")
+                self.assertEqual(len(job_doc), 1, f"{path.name}: expected a single job, got {list(job_doc)}")
                 self.assertNotIn("extends", next(iter(job_doc.values())))
 
     def test_no_hci_job_enabled(self):
@@ -141,9 +141,9 @@ class GranularFilesTest(unittest.TestCase):
                 cache = _job_body(path).get("cache")
                 if cache is None:
                     continue
-                # "-build.yml" == реальный шаг build (cache override pull-push в runtime_component);
-                # "-image-build.yml" — шаг image:build, он тоже матчит суффикс "-build.yml", но
-                # cache у него не переопределяется и остаётся pull, как у test/lint/publish/image:*.
+                # "-build.yml" == the real build step (cache override pull-push in runtime_component);
+                # "-image-build.yml" is the image:build step — it also matches the "-build.yml" suffix,
+                # but its cache isn't overridden and stays pull, like test/lint/publish/image:*.
                 is_build_step = path.name.endswith("-build.yml") and not path.name.endswith("-image-build.yml")
                 expected = "pull-push" if is_build_step else "pull"
                 self.assertEqual(cache.get("policy"), expected, f"{path.name}: cache.policy")
@@ -152,7 +152,7 @@ class GranularFilesTest(unittest.TestCase):
         for path in GRANULAR_FILES:
             with self.subTest(file=path.name):
                 job = _job_body(path)
-                self.assertIn("interruptible", job, f"{path.name}: нет ключа interruptible")
+                self.assertIn("interruptible", job, f"{path.name}: missing the interruptible key")
                 self.assertEqual(job["interruptible"], not path.name.endswith("-publish.yml"))
 
     def test_helm_tools_image(self):
@@ -161,9 +161,9 @@ class GranularFilesTest(unittest.TestCase):
                 self.assertEqual(_job_body(TEMPLATES / name).get("image"), "$[[ inputs.tools_image ]]")
 
     def test_inputs_match_usage_exactly(self):
-        """Регрессия на раунд-4 shallow-merge баги: spec.inputs должен ровно совпадать с
-        множеством $[[ inputs.X ]], реально встречающихся в сыром тексте файла — независимый
-        повторный скан файла с диска, не через internal-состояние generate.py."""
+        """Regression for the round-4 shallow-merge bugs: spec.inputs must match exactly the
+        set of $[[ inputs.X ]] actually present in the file's raw text — an independent
+        rescan of the file from disk, not through generate.py's internal state."""
         for path in GRANULAR_FILES:
             with self.subTest(file=path.name):
                 text, (spec_doc, _) = _load(path)
@@ -179,15 +179,15 @@ class GranularFilesTest(unittest.TestCase):
                 self.assertTrue(CORE_INPUTS <= declared, f"{path.name}: missing {CORE_INPUTS - declared}")
 
     def test_rules_narrowed(self):
-        """rules() в standalone-рендере без enabled/image_only/library_only, tag_only сохранён
-        (явно проверяем фактическое значение rules на диске, не только отсутствие HCI_JOB_ENABLED —
-        иначе image_only/library_only-утечка остаётся незамеченной, т.к. не содержит этой строки)."""
+        """rules() in the standalone render drops enabled/image_only/library_only, tag_only is kept
+        (explicitly checking the actual rules value on disk, not just the absence of HCI_JOB_ENABLED —
+        otherwise an image_only/library_only leak would go unnoticed, since it doesn't contain that string)."""
         for path in GRANULAR_FILES:
             with self.subTest(file=path.name):
                 r = _job_body(path).get("rules")
                 is_real_build = path.name.endswith("-build.yml") and not path.name.endswith("-image-build.yml")
                 if is_real_build:
-                    self.assertIsNone(r, f"{path.name}: build не должен иметь rules (как в бандле)")
+                    self.assertIsNone(r, f"{path.name}: build should have no rules (same as in the bundle)")
                 elif path.name.endswith("-publish.yml"):
                     self.assertEqual(r, [{"if": "$CI_COMMIT_TAG"}])
                 else:
@@ -195,10 +195,10 @@ class GranularFilesTest(unittest.TestCase):
 
 
 class StandaloneJobsUnitTest(unittest.TestCase):
-    """Прямой юнит-тест на standalone_jobs() — merge-формулу нельзя проверить по факту на
-    реальных 67 файлах, т.к. среди них нет job-level variable, конфликтующей с base (кроме
-    HCI_JOB_ENABLED, который всегда выпиливается) — без этого теста направление merge
-    (job побеждает base по-ключно) может развернуться незаметно при добавлении нового шага."""
+    """A direct unit test for standalone_jobs() — the merge formula can't be verified against
+    the real 67 files, since none of them has a job-level variable conflicting with base
+    (other than HCI_JOB_ENABLED, which is always stripped) — without this test the merge
+    direction (job wins over base per-key) could silently flip when a new step is added."""
 
     def test_variables_merge_job_wins_per_key(self):
         base_job = {"tags": ["t"], "interruptible": True, "variables": {"A": "base", "B": "base"}}

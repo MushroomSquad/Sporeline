@@ -5,8 +5,8 @@
 # Otherwise the sonar-scanner CLI is used.
 
 step::sonar() {
-  [[ -n "${HCI_SONAR_HOST_URL:-}" ]] || log::die "Не задан HCI_SONAR_HOST_URL (SONAR_HOST)"
-  [[ -n "${HCI_SONAR_TOKEN:-}" ]] || log::die "Не задан HCI_SONAR_TOKEN (SONAR_KEY)"
+  [[ -n "${HCI_SONAR_HOST_URL:-}" ]] || log::die "HCI_SONAR_HOST_URL is not set (SONAR_HOST)"
+  [[ -n "${HCI_SONAR_TOKEN:-}" ]] || log::die "HCI_SONAR_TOKEN is not set (SONAR_KEY)"
   local key params=() extra=() line
   key="${HCI_SONAR_PROJECT_KEY:-$(naming::sonar_key)}"
   params=(

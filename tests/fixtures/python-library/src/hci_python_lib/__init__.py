@@ -1,4 +1,4 @@
-"""Минимальная библиотека для e2e Python."""
+"""Minimal library for Python e2e."""
 
 def ping() -> str:
     return "pong"

@@ -1,4 +1,4 @@
-# Сборка дополнительных образов платформы (не обёртки рантаймов).
+# Builds additional platform images (not the runtime wrappers).
 
 .images:extra:
   extends: .images:build

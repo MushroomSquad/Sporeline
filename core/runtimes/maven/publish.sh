@@ -3,7 +3,7 @@
 rt::publish() {
   local kind=push url goals=() g a v p published=0
   if ! naming::is_release; then
-    ci::is_true "${HCI_PUBLISH_SNAPSHOTS:-false}" || ci::skip "публикация библиотеки только по тегу (или HCI_PUBLISH_SNAPSHOTS=true)"
+    ci::is_true "${HCI_PUBLISH_SNAPSHOTS:-false}" || ci::skip "library publish only runs on a tag (or HCI_PUBLISH_SNAPSHOTS=true)"
     kind=snapshot
   fi
   url="$(registry::url MAVEN "$kind")"

@@ -1,8 +1,8 @@
 # shellcheck shell=bash
 rt::build() {
-  [[ -f Cargo.toml ]] || log::die "Нет Cargo.toml"
+  [[ -f Cargo.toml ]] || log::die "No Cargo.toml"
   if [[ "$HCI_SERVICE_TYPE" == "library" ]]; then
-    grep -q '^\[package\]' Cargo.toml || log::die "Публикуется только корневой crate с секцией [package]"
+    grep -q '^\[package\]' Cargo.toml || log::die "Only the root crate with a [package] section is published"
     if naming::is_release; then
       local ver
       ver="$(naming::version)"
@@ -25,14 +25,14 @@ rt::build() {
       | if length == 1 then .[0].name else empty end
     ' <<< "$meta")"
   fi
-  [[ -n "$pkg" ]] || log::die "Не удалось выбрать пакет. Задайте HCI_RUST_PACKAGE"
+  [[ -n "$pkg" ]] || log::die "Could not pick a package. Set HCI_RUST_PACKAGE"
   if [[ -z "$bin" ]]; then
     bin="$(jq -r --arg p "$pkg" '
       .packages[] | select(.name == $p)
       | (.default_run // ([.targets[] | select(.kind | index("bin")) | .name] | if length == 1 then .[0] else empty end))
     ' <<< "$meta")"
   fi
-  [[ -n "$bin" ]] || log::die "Не удалось выбрать бинарник. Задайте HCI_RUST_BIN"
+  [[ -n "$bin" ]] || log::die "Could not pick a binary. Set HCI_RUST_BIN"
   local host
   host="$(rustc -vV | awk '/^host:/{print $2}')"
   mkdir -p "${CARGO_HOME:-$HCI_CACHE_DIR/cargo}"

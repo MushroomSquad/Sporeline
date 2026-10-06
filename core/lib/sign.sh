@@ -6,9 +6,9 @@ sign::enabled() {
     return 0
   fi
   if ci::is_true "${HCI_SIGN_REQUIRED:-false}"; then
-    log::die "Подпись обязательна (HCI_SIGN_REQUIRED=true), но HCI_COSIGN_KEY не задан"
+    log::die "Signing is required (HCI_SIGN_REQUIRED=true), but HCI_COSIGN_KEY is not set"
   fi
-  log::warn "HCI_COSIGN_KEY не задан, образ не подписывается"
+  log::warn "HCI_COSIGN_KEY not set, the image will not be signed"
   return 1
 }
 

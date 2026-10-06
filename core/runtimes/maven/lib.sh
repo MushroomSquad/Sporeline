@@ -10,7 +10,7 @@ mvn::settings() {
   if registry::has MAVEN; then
     mirror="<mirror><id>hci</id><url>$(ci::xml_escape "$(registry::url MAVEN pull)")/</url><mirrorOf>external:*</mirrorOf></mirror>"
   else
-    log::warn "Реестр Maven не задан: зависимости берутся из репозиториев проекта"
+    log::warn "No Maven registry set: dependencies are resolved from the project's own repositories"
   fi
   cat > "$file" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -81,7 +81,7 @@ mvn::apply_version() {
     mvn::set_version "$(naming::version)"
   else
     current="$(mvn::eval project.version)"
-    [[ -n "$current" ]] || log::die "Не удалось определить project.version"
+    [[ -n "$current" ]] || log::die "Could not determine project.version"
     [[ "$current" == *-SNAPSHOT ]] || mvn::set_version "$current-SNAPSHOT"
   fi
 }
@@ -92,7 +92,7 @@ rt::sonar_params() {
   if [[ -n "$cov" ]]; then
     printf '%s\n' "-Dsonar.coverage.jacoco.xmlReportPaths=$cov"
   else
-    log::warn "Отчёт покрытия JaCoCo не найден (${HCI_MAVEN_COVERAGE_FILES})"
+    log::warn "JaCoCo coverage report not found (${HCI_MAVEN_COVERAGE_FILES})"
   fi
   printf '%s\n' "-Dsonar.sourceEncoding=UTF-8"
 }

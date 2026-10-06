@@ -54,7 +54,7 @@ python::export_reqs() {
       elif [[ -f pyproject.toml ]]; then
         printf '# pyproject.toml\n' > "$out"
       else
-        log::die "Нет requirements.txt / pyproject.toml"
+        log::die "No requirements.txt / pyproject.toml"
       fi
       ;;
   esac

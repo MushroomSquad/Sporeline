@@ -1,6 +1,6 @@
 name: maven
 title: Java (Maven)
-description: Maven-проекты (в т.ч. многомодульные). Профиль quarkus — HCI_PROFILE=quarkus.
+description: Maven projects (incl. multi-module). Quarkus profile — HCI_PROFILE=quarkus.
 default_version: "21"
 service_types: [image, library]
 steps: [build, test, publish, image:build, image:scan, image:publish, cd:bump, cd:notify, deps:scan, sonar, svace, appscreener, kcs]

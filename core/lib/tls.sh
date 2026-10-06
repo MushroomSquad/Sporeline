@@ -62,9 +62,9 @@ tls::java_truststore() {
       [[ -f "$cert" ]] || continue
       i=$((i + 1))
       keytool -importcert -noprompt -trustcacerts -alias "hci-ca-$i" -file "$cert" \
-        -keystore "$store" -storepass "$pass" >/dev/null 2>&1 || log::warn "Не удалось импортировать $cert"
+        -keystore "$store" -storepass "$pass" >/dev/null 2>&1 || log::warn "Failed to import $cert"
     done
-    log::info "Truststore: импортировано сертификатов: $i"
+    log::info "Truststore: imported certificates: $i"
   fi
   export HCI_TRUSTSTORE="$store"
   export HCI_JAVA_TLS_OPTS="-Djavax.net.ssl.trustStore=$store -Djavax.net.ssl.trustStorePassword=$pass"

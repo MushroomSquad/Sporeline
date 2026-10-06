@@ -1,6 +1,6 @@
 name: php
 title: PHP
-description: Composer + s2i (ubi php). Тесты — PHPUnit.
+description: Composer + s2i (ubi php). Tests via PHPUnit.
 default_version: "83"
 service_types: [image]
 steps: [build, test, image:build, image:scan, image:publish, cd:bump, cd:notify, deps:scan, sonar, appscreener, kcs]

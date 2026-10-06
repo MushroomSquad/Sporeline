@@ -1,5 +1,5 @@
-// Пример Jenkinsfile приложения.
-// Shared library root = adapters/jenkins (или отдельный repo с vars/).
+// Example application Jenkinsfile.
+// Shared library root = adapters/jenkins (or a separate repo with vars/).
 @Library('hyperion-ci') _
 
 hciPipeline(

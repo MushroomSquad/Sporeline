@@ -1,6 +1,6 @@
 name: python
 title: Python
-description: pip, uv, poetry или pdm. Сервис — venv в образе; библиотека — wheel/sdist в pypi-hosted.
+description: pip, uv, poetry, or pdm. Service mode packages a venv into the image; library mode publishes a wheel/sdist to a pypi-hosted repo.
 default_version: "312"
 service_types: [image, library]
 steps: [build, test, lint, publish, image:build, image:scan, image:publish, cd:bump, cd:notify, deps:scan, sonar, appscreener, kcs]

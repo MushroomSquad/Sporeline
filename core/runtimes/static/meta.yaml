@@ -1,6 +1,6 @@
 name: static
-title: Статический сайт (nginx)
-description: Сборка фронтенда (npm/yarn/pnpm, если есть package.json) и упаковка в образ nginx через s2i.
+title: Static site (nginx)
+description: Builds the frontend (npm/yarn/pnpm, if package.json exists) and packages it into an nginx image via s2i.
 default_version: "126"
 service_types: [image]
 steps: [build, lint, image:build, image:scan, image:publish, cd:bump, cd:notify, deps:scan, sonar, appscreener, kcs]

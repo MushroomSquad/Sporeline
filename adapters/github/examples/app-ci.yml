@@ -1,4 +1,4 @@
-# Пример вызова reusable workflow из репозитория приложения.
+# Example reusable-workflow call from an application repository.
 name: CI
 
 on:

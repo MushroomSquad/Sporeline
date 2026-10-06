@@ -8,7 +8,7 @@ teardown() { hci_teardown_workdir; }
 @test "неизвестная команда завершается ошибкой" {
   run "$HCI_TEST_BIN" frobnicate --runtime=none
   [ "$status" -ne 0 ]
-  [[ "$output" == *"Неизвестная команда: frobnicate"* ]]
+  [[ "$output" == *"Unknown command: frobnicate"* ]]
 }
 
 @test "пользовательская команда шага через HCI_<STEP>_CMD" {
@@ -20,7 +20,7 @@ teardown() { hci_teardown_workdir; }
 @test "шаг можно отключить через HCI_<STEP>_ENABLED=false" {
   run "$HCI_TEST_BIN" image:build --runtime=none --image-build-enabled=false
   [ "$status" -eq 0 ]
-  [[ "$output" == *"отключён"* ]]
+  [[ "$output" == *"disabled"* ]]
 }
 
 @test "мягкий шаг в нестрогом режиме возвращает HCI_SOFT_EXIT_CODE" {
@@ -61,7 +61,7 @@ teardown() { hci_teardown_workdir; }
 @test "шаг, не поддерживаемый рантаймом, пропускается" {
   run "$HCI_TEST_BIN" lint --runtime=maven
   [ "$status" -eq 0 ]
-  [[ "$output" == *"не поддерживает шаг lint"* ]]
+  [[ "$output" == *"does not support step lint"* ]]
 }
 
 @test "рабочий каталог задаётся через --workdir" {
@@ -75,5 +75,5 @@ teardown() { hci_teardown_workdir; }
 @test "неверный service_type отклоняется" {
   run "$HCI_TEST_BIN" build --runtime=none --service-type=binary
   [ "$status" -ne 0 ]
-  [[ "$output" == *"image или library"* ]]
+  [[ "$output" == *"image or library"* ]]
 }

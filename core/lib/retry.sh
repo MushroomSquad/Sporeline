@@ -17,10 +17,10 @@ retry() {
     "$@" && return 0
     rc=$?
     if (( try >= attempts )); then
-      log::error "Команда завершилась с кодом $rc после $attempts попыток: $(log::redact "$*")"
+      log::error "Command exited with code $rc after $attempts attempts: $(log::redact "$*")"
       return "$rc"
     fi
-    log::warn "Попытка $try/$attempts не удалась (код $rc), повтор через ${delay}с"
+    log::warn "Attempt $try/$attempts failed (code $rc), retrying in ${delay}s"
     sleep "$delay"
     try=$((try + 1))
     delay=$((delay * 2))

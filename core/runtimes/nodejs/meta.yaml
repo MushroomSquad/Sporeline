@@ -1,6 +1,6 @@
 name: nodejs
 title: Node.js
-description: npm, yarn или pnpm (corepack). Скрипты build/test/lint из package.json.
+description: npm, yarn, or pnpm (corepack). build/test/lint scripts come from package.json.
 default_version: "22"
 service_types: [image, library]
 steps: [build, test, lint, publish, image:build, image:scan, image:publish, cd:bump, cd:notify, deps:scan, sonar, svace, appscreener, kcs]

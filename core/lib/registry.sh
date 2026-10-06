@@ -29,12 +29,12 @@ registry::is_insecure() { [[ "$(registry::scheme)" == "http" ]] || ci::is_true "
 registry::url() {
   local type="$1" kind="${2:-pull}" host repo field
   host="$(registry::host "$type")"
-  [[ -n "$host" ]] || log::die "Не задан хост реестра для $type (HCI_REGISTRY_${type^^}_HOST или HCI_REGISTRY_HOST)"
+  [[ -n "$host" ]] || log::die "Registry host not set for $type (HCI_REGISTRY_${type^^}_HOST or HCI_REGISTRY_HOST)"
   case "$kind" in
     pull) field=PULL_REPO ;;
     push) field=REPO ;;
     snapshot) field=SNAPSHOT_REPO ;;
-    *) log::die "registry::url: неизвестный вид '$kind'" ;;
+    *) log::die "registry::url: unknown kind '$kind'" ;;
   esac
   repo="$(registry::_field "$type" "$field")"
   printf '%s://%s%s' "$(registry::scheme)" "$host" "${repo:+/$repo}"
@@ -92,18 +92,18 @@ registry::oci_login() {
   host="$(registry::host "$type")"
   user="$(registry::user "$type")"
   pass="$(registry::password "$type")"
-  [[ -n "$host" ]] || { log::warn "Хост реестра $type не задан, авторизация пропущена"; return 0; }
+  [[ -n "$host" ]] || { log::warn "Registry host $type not set, skipping authentication"; return 0; }
   export REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE:-$HCI_TMP/auth.json}"
   registry::oci_trust "$host"
   if [[ -z "$user" ]]; then
-    log::warn "Учётные данные для $host не заданы, работаем анонимно"
+    log::warn "No credentials for $host, proceeding anonymously"
     return 0
   fi
   for tool in buildah skopeo podman; do
     ci::has "$tool" && break
     tool=""
   done
-  [[ -n "$tool" ]] || log::die "Нет buildah/skopeo/podman для авторизации в $host"
+  [[ -n "$tool" ]] || log::die "No buildah/skopeo/podman available to authenticate to $host"
   retry registry::_oci_login_once "$tool" "$host" "$user" "$pass"
-  log::info "Авторизация в $host выполнена ($tool)"
+  log::info "Authenticated to $host ($tool)"
 }

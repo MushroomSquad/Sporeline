@@ -10,7 +10,7 @@
 image::dockerfile() {
   local f
   if [[ -n "${HCI_IMAGE_DOCKERFILE:-}" ]]; then
-    [[ -f "$HCI_IMAGE_DOCKERFILE" ]] || log::die "HCI_IMAGE_DOCKERFILE='$HCI_IMAGE_DOCKERFILE' не найден"
+    [[ -f "$HCI_IMAGE_DOCKERFILE" ]] || log::die "HCI_IMAGE_DOCKERFILE='$HCI_IMAGE_DOCKERFILE' not found"
     printf '%s' "$HCI_IMAGE_DOCKERFILE"
     return 0
   fi
@@ -27,7 +27,7 @@ image::mode() {
   fi
   case "$mode" in
     base | dockerfile | s2i | cekit) printf '%s' "$mode" ;;
-    *) log::die "Неизвестный режим сборки образа: $mode" ;;
+    *) log::die "Unknown image build mode: $mode" ;;
   esac
 }
 
@@ -37,7 +37,7 @@ image::runtime_image() {
   elif ci::meta_image runtime 2>/dev/null; then
     :
   else
-    log::die "Не задан базовый образ: HCI_RUNTIME_IMAGE (или версия рантайма отсутствует в meta.yaml)"
+    log::die "No base image set: HCI_RUNTIME_IMAGE (or the runtime version is missing from meta.yaml)"
   fi
 }
 
@@ -76,7 +76,7 @@ image::context_files() {
   local -n _files="$1"
   local patterns=() excludes=() p f e skip
   ci::split patterns "${HCI_IMAGE_CONTEXT:-}"
-  [[ ${#patterns[@]} -gt 0 ]] || log::die "HCI_IMAGE_CONTEXT пуст: нечего копировать в образ"
+  [[ ${#patterns[@]} -gt 0 ]] || log::die "HCI_IMAGE_CONTEXT is empty: nothing to copy into the image"
   ci::split excludes "${HCI_IMAGE_CONTEXT_EXCLUDE:-}"
   _files=()
   shopt -s nullglob globstar
@@ -93,7 +93,7 @@ image::context_files() {
     done
   done
   shopt -u nullglob globstar
-  [[ ${#_files[@]} -gt 0 ]] || log::die "По HCI_IMAGE_CONTEXT='${HCI_IMAGE_CONTEXT}' ничего не найдено. Проверьте артефакты шага build."
+  [[ ${#_files[@]} -gt 0 ]] || log::die "Nothing found for HCI_IMAGE_CONTEXT='${HCI_IMAGE_CONTEXT}'. Check the build step's artifacts."
 }
 
 image::_from() {
@@ -154,7 +154,7 @@ image::cache_repo() {
 
 image::build_dockerfile() {
   local platform="$1" iid="$2" file args=() items=() item
-  file="$(image::dockerfile)" || log::die "Режим dockerfile: не найден Containerfile/Dockerfile (HCI_IMAGE_DOCKERFILE)"
+  file="$(image::dockerfile)" || log::die "dockerfile mode: no Containerfile/Dockerfile found (HCI_IMAGE_DOCKERFILE)"
   args=(--layers --pull --platform "$platform" -f "$file" --iidfile "$iid"
     --build-arg "REGISTRY_HOST=$(registry::host OCI)"
     --build-arg "IMAGE_CONTEXT=${HCI_IMAGE_CONTEXT:-}"
@@ -177,7 +177,7 @@ image::build_cekit() {
   ci::require cekit
   args=(--descriptor "$HCI_CEKIT_DESCRIPTOR" build)
   [[ -n "${HCI_CEKIT_OVERRIDE:-}" ]] && args+=(--overrides-file "overrides/${HCI_CEKIT_OVERRIDE}.yaml")
-  [[ "$platform" == "linux/amd64" ]] || log::warn "cekit собирает под платформу раннера, $platform игнорируется"
+  [[ "$platform" == "linux/amd64" ]] || log::warn "cekit builds for the runner's platform, $platform is ignored"
   log::cmd cekit "${args[@]}" buildah --tag "$tag"
   buildah inspect --type image --format '{{.FromImageID}}' "$tag" > "$iid"
 }
@@ -185,14 +185,14 @@ image::build_cekit() {
 step::image_build() {
   ci::require buildah
   if [[ "$HCI_SERVICE_TYPE" == "library" ]]; then
-    ci::skip "service_type=library, образ не собирается"
+    ci::skip "service_type=library, image is not built"
   fi
   local mode out platforms=() p iid ids=()
   mode="$(image::mode)"
   ci::split platforms "${HCI_IMAGE_PLATFORMS:-linux/amd64}"
   out="$HCI_WORKDIR_ABS/$HCI_OCI_DIR"
   rm -rf "$out"
-  log::info "Режим сборки: $mode; платформы: ${platforms[*]}"
+  log::info "Build mode: $mode; platforms: ${platforms[*]}"
 
   registry::oci_login OCI
   if [[ "$mode" == "dockerfile" ]] && ci::is_true "${HCI_IMAGE_CACHE:-true}"; then
@@ -201,10 +201,10 @@ step::image_build() {
 
   for p in "${platforms[@]}"; do
     iid="$HCI_TMP/iid-$(ci::slug "$p")"
-    log::section_start "image_$(ci::slug "$p")" "Сборка образа для $p"
+    log::section_start "image_$(ci::slug "$p")" "Building the image for $p"
     "image::build_$mode" "$p" "$iid"
     log::section_end "image_$(ci::slug "$p")"
-    [[ -s "$iid" ]] || log::die "Сборка для $p не вернула идентификатор образа"
+    [[ -s "$iid" ]] || log::die "The build for $p did not return an image ID"
     ids+=("$(<"$iid")")
   done
 
@@ -217,5 +217,5 @@ step::image_build() {
     for iid in "${ids[@]}"; do log::cmd buildah manifest add "$list" "$iid"; done
     log::cmd buildah manifest push --all "$list" "oci:$out"
   fi
-  log::ok "Образ сохранён в $HCI_OCI_DIR"
+  log::ok "Image saved to $HCI_OCI_DIR"
 }

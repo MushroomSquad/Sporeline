@@ -24,7 +24,7 @@ teardown() { hci_teardown_workdir; }
   echo '<project/>' > pom.xml
   run "$HCI_TEST_BIN" lint --runtime=maven
   [ "$status" -eq 0 ]
-  [[ "$output" == *"не поддерживает шаг lint"* ]]
+  [[ "$output" == *"does not support step lint"* ]]
 }
 
 @test "пароль реестра не печатается при настройке maven" {

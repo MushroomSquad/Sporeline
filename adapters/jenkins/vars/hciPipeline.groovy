@@ -1,8 +1,8 @@
 #!/usr/bin/env groovy
 /**
- * Тонкий declarative pipeline → ci <step>.
- * Логика (ветки, retry, manual) — в Jenkinsfile вокруг вызова или в when{} ниже по месту.
- * См. docs/pipeline.md
+ * A thin declarative pipeline → ci <step>.
+ * Logic (branches, retry, manual) lives in the Jenkinsfile around the call, or in the when{} blocks below.
+ * See docs/pipeline.md
  *
  *   @Library('hyperion-ci') _
  *   hciPipeline(
@@ -186,7 +186,7 @@ def call(Map args = [:]) {
             try {
               unstash 'hci-scan'
             } catch (Exception ignored) {
-              echo 'hci-scan stash отсутствует, продолжаем без отчёта скана'
+              echo 'hci-scan stash is missing, continuing without the scan report'
             }
             hci(step: 'image:publish', workdir: workdir)
           }
@@ -221,7 +221,7 @@ def call(Map args = [:]) {
 
 private String required(Map args, String key) {
   if (!args[key]) {
-    error("hciPipeline: обязательный параметр ${key}")
+    error("hciPipeline: required parameter ${key}")
   }
   return args[key] as String
 }

@@ -5,10 +5,10 @@ step::image_publish() {
   ci::require skopeo
   [[ "$HCI_SERVICE_TYPE" != "library" ]] || ci::skip "service_type=library"
   local oci="$HCI_WORKDIR_ABS/$HCI_OCI_DIR" host repo tag ref digest extra=() t
-  [[ -d "$oci" ]] || log::die "Нет $HCI_OCI_DIR: шаг image:publish должен получать артефакт шага image:build"
+  [[ -d "$oci" ]] || log::die "No $HCI_OCI_DIR: step image:publish must receive the image:build step's artifact"
 
   host="$(registry::host OCI_PUSH)"
-  [[ -n "$host" ]] || log::die "Не задан реестр публикации (HCI_REGISTRY_OCI_PUSH_HOST / REGISTRY_INT_HOST)"
+  [[ -n "$host" ]] || log::die "No publish registry set (HCI_REGISTRY_OCI_PUSH_HOST / REGISTRY_INT_HOST)"
   repo="$(naming::image_repo)"
   tag="$(naming::image_tag)"
   ref="$host/$repo"
@@ -20,7 +20,7 @@ step::image_publish() {
   retry log::cmd skopeo copy --all --retry-times 2 "${tls[@]+"${tls[@]}"}" \
     --digestfile "$HCI_TMP/digest" "oci:$oci" "docker://$ref:$tag"
   digest="$(<"$HCI_TMP/digest")"
-  log::ok "Опубликован $ref:$tag@$digest"
+  log::ok "Published $ref:$tag@$digest"
 
   ci::split extra "${HCI_IMAGE_EXTRA_TAGS:-}"
   if naming::is_release && ci::is_true "${HCI_IMAGE_TAG_LATEST:-false}"; then

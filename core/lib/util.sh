@@ -47,7 +47,7 @@ ci::words() {
 ci::require() {
   local cmd
   for cmd in "$@"; do
-    command -v "$cmd" >/dev/null 2>&1 || log::die "Не найдена утилита '$cmd'. Используйте образ с ней или задайте другой образ для джоба."
+    command -v "$cmd" >/dev/null 2>&1 || log::die "Tool '$cmd' not found. Use an image that has it, or set a different image for the job."
   done
 }
 
@@ -55,7 +55,7 @@ ci::has() { command -v "$1" >/dev/null 2>&1; }
 
 # Skips the step: prints the reason and exits with the skip code.
 ci::skip() {
-  log::info "Шаг пропущен: $*"
+  log::info "Step skipped: $*"
   exit "$HCI_SKIP_CODE"
 }
 
@@ -83,7 +83,7 @@ ci::yaml_to_json() {
   elif ci::has python3 && python3 -c 'import yaml' 2>/dev/null; then
     python3 -c 'import json, sys, yaml; json.dump(yaml.safe_load(open(sys.argv[1])) or {}, sys.stdout)' "$file"
   else
-    log::die "Для чтения $file нужен yq (mikefarah) или python3 с PyYAML"
+    log::die "Reading $file requires yq (mikefarah) or python3 with PyYAML"
   fi
 }
 

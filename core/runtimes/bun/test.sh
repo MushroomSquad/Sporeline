@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 rt::test() {
   if [[ -n "${HCI_BUN_TEST_SCRIPT:-}" ]]; then
-    bun::has_script "$HCI_BUN_TEST_SCRIPT" || ci::skip "нет скрипта $HCI_BUN_TEST_SCRIPT"
+    bun::has_script "$HCI_BUN_TEST_SCRIPT" || ci::skip "no $HCI_BUN_TEST_SCRIPT script"
     log::cmd bun run "$HCI_BUN_TEST_SCRIPT"
     return 0
   fi

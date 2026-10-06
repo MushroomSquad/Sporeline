@@ -1,6 +1,6 @@
-# Reusable workflow: тонкий адаптер GitHub Actions → ci <step>.
-# Логика (ветки, when, retry) — в вызывающем workflow / копии этого файла.
-# См. docs/pipeline.md
+# Reusable workflow: a thin GitHub Actions adapter → ci <step>.
+# Logic (branches, when, retry) lives in the calling workflow / a copy of this file.
+# See docs/pipeline.md
 #
 #   jobs:
 #     ci:
@@ -18,7 +18,7 @@ on:
   workflow_call:
     inputs:
       runtime:
-        description: Рантайм (maven, gradle, nodejs, python, …)
+        description: Runtime (maven, gradle, nodejs, python, …)
         type: string
         required: true
       runtime-version:
@@ -42,11 +42,11 @@ on:
         required: false
         default: true
       build-image:
-        description: Образ сборки с /opt/ci
+        description: Build image with /opt/ci
         type: string
         required: true
       tools-image:
-        description: Образ tools (buildah, trivy, …)
+        description: Tools image (buildah, trivy, …)
         type: string
         required: true
       ci-bin:
@@ -147,7 +147,7 @@ jobs:
           ${{ inputs.ci-bin }} lint
           rc=$?
           set -e
-          if [ "$rc" -eq 78 ]; then echo "::warning::hci lint: мягкий отказ"; exit 0; fi
+          if [ "$rc" -eq 78 ]; then echo "::warning::hci lint: soft failure"; exit 0; fi
           exit "$rc"
 
   deps-scan:
@@ -171,7 +171,7 @@ jobs:
           ${{ inputs.ci-bin }} deps:scan
           rc=$?
           set -e
-          if [ "$rc" -eq 78 ]; then echo "::warning::hci deps:scan: мягкий отказ"; exit 0; fi
+          if [ "$rc" -eq 78 ]; then echo "::warning::hci deps:scan: soft failure"; exit 0; fi
           exit "$rc"
 
   test:
@@ -201,7 +201,7 @@ jobs:
           ${{ inputs.ci-bin }} test
           rc=$?
           set -e
-          if [ "$rc" -eq 78 ]; then echo "::warning::hci test: мягкий отказ"; exit 0; fi
+          if [ "$rc" -eq 78 ]; then echo "::warning::hci test: soft failure"; exit 0; fi
           exit "$rc"
 
   sonar:
@@ -232,7 +232,7 @@ jobs:
           ${{ inputs.ci-bin }} sonar
           rc=$?
           set -e
-          if [ "$rc" -eq 78 ]; then echo "::warning::hci sonar: мягкий отказ"; exit 0; fi
+          if [ "$rc" -eq 78 ]; then echo "::warning::hci sonar: soft failure"; exit 0; fi
           exit "$rc"
 
   image-build:
@@ -291,7 +291,7 @@ jobs:
           ${{ inputs.ci-bin }} image:scan
           rc=$?
           set -e
-          if [ "$rc" -eq 78 ]; then echo "::warning::hci image:scan: мягкий отказ"; exit 0; fi
+          if [ "$rc" -eq 78 ]; then echo "::warning::hci image:scan: soft failure"; exit 0; fi
           exit "$rc"
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}

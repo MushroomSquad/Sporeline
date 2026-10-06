@@ -1,6 +1,6 @@
 name: dotnet
 title: .NET
-description: SDK-стиль csproj. Библиотека — nupkg в nuget-hosted.
+description: SDK-style csproj. Library mode publishes a nupkg to a nuget-hosted repo.
 default_version: "100"
 service_types: [image, library]
 steps: [build, test, publish, image:build, image:scan, image:publish, cd:bump, cd:notify, deps:scan, sonar, svace, appscreener, kcs]

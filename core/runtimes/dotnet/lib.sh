@@ -42,7 +42,7 @@ rt::setup() {
   export NUGET_PACKAGES="${NUGET_PACKAGES:-$HCI_CACHE_DIR/nuget}"
   export HCI_DOTNET_NUGET_CONFIG
   HCI_DOTNET_NUGET_CONFIG="$(dotnet::nuget_config)"
-  HCI_DOTNET_CSPROJ="$(dotnet::csproj)" || log::die "Не найден .csproj (HCI_DOTNET_CSPROJ)"
+  HCI_DOTNET_CSPROJ="$(dotnet::csproj)" || log::die "No .csproj found (HCI_DOTNET_CSPROJ)"
   export HCI_DOTNET_CSPROJ
   if [[ -z "${HCI_DOTNET_TEST_CSPROJ:-}" ]]; then
     HCI_DOTNET_TEST_CSPROJ="$(ci::first_file '*.Tests.csproj' '**/*.Tests.csproj' || true)"

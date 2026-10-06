@@ -71,7 +71,7 @@ HOOK
 
   run step::cd_bump
   [ "$status" -eq 0 ]
-  [[ "$output" == *"попытка 1/3"* ]]
+  [[ "$output" == *"attempt 1/3"* ]]
   local check; check="$(mktemp -d)"
   git clone -q "file://$ORIGIN" "$check"
   grep -q "sha256:$(printf 'b%.0s' {1..64})" "$check/deploy/app.yaml"
@@ -135,7 +135,7 @@ HOOK
   [ "$status" -ne 0 ]
   [[ "$output" != *"FAKE-KEY-MATERIAL-zzzz"* ]]
   # fatal classification isn't retried: the log must not contain a second attempt
-  [[ "$output" != *"попытка 2"* ]]
+  [[ "$output" != *"attempt 2"* ]]
 }
 
 @test "integration: credential.helper= передаётся git при clone и push (защита от персистентности в ~/.git-credentials)" {

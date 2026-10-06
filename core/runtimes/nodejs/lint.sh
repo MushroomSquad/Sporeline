@@ -6,7 +6,7 @@ node::lint() {
   fi
   local cfg
   cfg="$(ci::first_file eslint.config.js eslint.config.mjs eslint.config.cjs .eslintrc .eslintrc.js .eslintrc.json .eslintrc.yml || true)"
-  [[ -n "$cfg" ]] || ci::skip "нет скрипта lint и конфигурации eslint"
+  [[ -n "$cfg" ]] || ci::skip "no lint script and no eslint config"
   ci::has eslint || log::cmd npm install --no-save eslint@"${HCI_ESLINT_VERSION:-8.56.0}"
   local extra=()
   ci::words extra "${HCI_ESLINT_ARGS:-src/}"

@@ -9,5 +9,5 @@ rt::build() {
       node::run_script "${HCI_STATIC_BUILD_SCRIPT:-build}"
     fi
   fi
-  [[ -d "${HCI_IMAGE_CONTEXT:-dist}" ]] || log::die "Нет каталога статики '${HCI_IMAGE_CONTEXT:-dist}'. Соберите фронтенд или задайте HCI_IMAGE_CONTEXT."
+  [[ -d "${HCI_IMAGE_CONTEXT:-dist}" ]] || log::die "No static assets directory '${HCI_IMAGE_CONTEXT:-dist}'. Build the frontend or set HCI_IMAGE_CONTEXT."
 }

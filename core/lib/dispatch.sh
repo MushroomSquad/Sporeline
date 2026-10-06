@@ -23,36 +23,36 @@ HCI_SETUP_STEPS=" build test lint publish sonar svace "
 
 dispatch::usage() {
   cat <<'EOF'
-Использование: ci <команда> [--ключ=значение ...]
+Usage: ci <command> [--key=value ...]
 
-Шаги сборки:
-  build            сборка (и упаковка библиотеки при service_type=library)
-  test             модульные тесты с покрытием
-  lint             линтеры
-  publish          публикация библиотеки в реестр пакетов
-  image:build      сборка образа (режимы base | dockerfile | s2i | cekit)
-  image:scan       анализ образа (Trivy) и SBOM
-  image:publish    публикация, подпись и аттестация образа
-  sbom             SBOM образа
-  deps:scan        анализ зависимостей (Trivy fs)
+Build steps:
+  build            build (and package a library when service_type=library)
+  test             unit tests with coverage
+  lint             linters
+  publish          publish a library to a package registry
+  image:build      build the image (modes: base | dockerfile | s2i | cekit)
+  image:scan       image analysis (Trivy) and SBOM
+  image:publish    publish, sign, and attest the image
+  sbom             image SBOM
+  deps:scan        dependency analysis (Trivy fs)
   sonar            SonarQube
   svace            Svace
   appscreener      Solar appScreener
   kcs              Kaspersky Container Security
-  helm:lint        проверка Helm-чарта
-  helm:publish     публикация Helm-чарта
-  cd:bump          бамп образа в GitOps-манифесте (git commit+push)
-  cd:notify        webhook-триггер GitOps-контроллера (ArgoCD/Flux)
+  helm:lint        check a Helm chart
+  helm:publish     publish a Helm chart
+  cd:bump          bump the image in a GitOps manifest (git commit+push)
+  cd:notify        webhook trigger for a GitOps controller (ArgoCD/Flux)
 
-Служебные команды:
-  config              итоговая конфигурация (секреты скрыты)
-  detect              определить рантайм и инструменты
-  images              образы сборки и запуска для текущего рантайма
-  manifest:validate   проверить манифест артефактов
-  run -- <команда>    выполнить команду в окружении рантайма
-  version             версия ядра
+Service commands:
+  config              final configuration (secrets hidden)
+  detect              detect the runtime and tools
+  images              build/runtime images for the current runtime
+  manifest:validate   validate the artifact manifest
+  run -- <command>    run a command inside the runtime environment
+  version             core version
 
-Любой ключ конфигурации можно передать аргументом: --runtime-version=21 -> HCI_RUNTIME_VERSION=21.
+Any configuration key can be passed as an argument: --runtime-version=21 -> HCI_RUNTIME_VERSION=21.
 EOF
 }
 
@@ -74,7 +74,7 @@ dispatch::setup_runtime() {
 dispatch::_run() {
   local step="$1" kind="$2" cmd_var="$3" file fn
 
-  trap 'log::error "Ошибка (код $?) в ${BASH_SOURCE[0]##*/}:${LINENO}: ${BASH_COMMAND}"' ERR
+  trap 'log::error "Error (code $?) at ${BASH_SOURCE[0]##*/}:${LINENO}: ${BASH_COMMAND}"' ERR
 
   if [[ "$HCI_SETUP_STEPS" == *" $step "* ]]; then
     dispatch::setup_runtime
@@ -85,12 +85,12 @@ dispatch::_run() {
   hooks::run "$step" pre
 
   if [[ -n "${!cmd_var:-}" ]]; then
-    log::info "Пользовательская команда из $cmd_var"
+    log::info "Custom command from $cmd_var"
     eval "${!cmd_var}"
   elif [[ "$kind" == "runtime" ]]; then
-    [[ "${HCI_RUNTIME:-none}" != "none" ]] || log::die "Рантайм не определён. Задайте HCI_RUNTIME или runtime: в .ci.yaml"
+    [[ "${HCI_RUNTIME:-none}" != "none" ]] || log::die "Runtime not detected. Set HCI_RUNTIME or runtime: in .ci.yaml"
     file="$HCI_HOME/runtimes/$HCI_RUNTIME/$step.sh"
-    [[ -f "$file" ]] || ci::skip "рантайм $HCI_RUNTIME не поддерживает шаг $step"
+    [[ -f "$file" ]] || ci::skip "runtime $HCI_RUNTIME does not support step $step"
     # shellcheck source=/dev/null
     source "$file"
     "rt::$step"
@@ -113,18 +113,18 @@ dispatch::_run() {
 dispatch::step() {
   local step="$1" kind up rc strict
   kind="${HCI_STEP_KIND[$step]:-}"
-  [[ -n "$kind" ]] || { dispatch::usage >&2; log::die "Неизвестная команда: $step"; }
+  [[ -n "$kind" ]] || { dispatch::usage >&2; log::die "Unknown command: $step"; }
 
   case "$HCI_SERVICE_TYPE" in
     image | library) ;;
-    *) log::die "HCI_SERVICE_TYPE должен быть image или library, получено: $HCI_SERVICE_TYPE" ;;
+    *) log::die "HCI_SERVICE_TYPE must be image or library, got: $HCI_SERVICE_TYPE" ;;
   esac
 
   up="${step^^}"
   up="${up//[:-]/_}"
   local enabled_var="HCI_${up}_ENABLED" strict_var="HCI_${up}_STRICT"
   if [[ -n "${!enabled_var:-}" ]] && ! ci::is_true "${!enabled_var}"; then
-    log::info "Шаг $step отключён ($enabled_var=${!enabled_var})"
+    log::info "Step $step disabled ($enabled_var=${!enabled_var})"
     return 0
   fi
 
@@ -139,7 +139,7 @@ dispatch::step() {
   log::section_end "hci_$up"
 
   if [[ $rc -eq 0 ]]; then
-    log::ok "Шаг $step выполнен"
+    log::ok "Step $step completed"
     return 0
   fi
   if [[ $rc -eq $HCI_SKIP_CODE ]]; then
@@ -148,11 +148,11 @@ dispatch::step() {
   if [[ "$HCI_SOFT_STEPS" == *" $step "* ]]; then
     strict="${!strict_var:-$HCI_STRICT}"
     if ! ci::is_true "$strict"; then
-      log::warn "Шаг $step завершился с ошибкой (код $rc), но строгий режим выключен"
+      log::warn "Step $step failed (code $rc), but strict mode is off"
       return "$HCI_SOFT_EXIT_CODE"
     fi
   fi
-  log::error "Шаг $step завершился с ошибкой (код $rc)"
+  log::error "Step $step failed (code $rc)"
   return "$rc"
 }
 
@@ -179,7 +179,7 @@ dispatch::main() {
   set -- "${HCI_ARGS[@]+"${HCI_ARGS[@]}"}"
 
   cd "$HCI_ROOT"
-  cd "${HCI_WORKDIR:-.}" || log::die "Рабочий каталог не найден: ${HCI_WORKDIR}"
+  cd "${HCI_WORKDIR:-.}" || log::die "Working directory not found: ${HCI_WORKDIR}"
   export HCI_WORKDIR_ABS="$PWD"
 
   HCI_TMP="$(mktemp -d "${TMPDIR:-/tmp}/hci.XXXXXX")"
@@ -200,7 +200,7 @@ dispatch::main() {
     images) dispatch::images ;;
     manifest:validate) manifest::validate "$@" ;;
     run)
-      [[ $# -gt 0 ]] || log::die "Использование: ci run -- <команда>"
+      [[ $# -gt 0 ]] || log::die "Usage: ci run -- <command>"
       dispatch::setup_runtime
       "$@"
       ;;

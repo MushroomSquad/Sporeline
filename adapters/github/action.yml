@@ -1,41 +1,41 @@
 name: Hyperion CI step
-description: Запускает шаг ядра Hyperion CI (ci <step>). Образ должен содержать /opt/ci или укажите ci-bin.
+description: Runs a Hyperion CI core step (ci <step>). The image must contain /opt/ci, or set ci-bin.
 author: Hyperion
 
 inputs:
   step:
-    description: "Шаг ядра: build, test, lint, publish, image:build, image:scan, image:publish, deps:scan, sonar, svace, appscreener, kcs, helm:lint, helm:publish, cd:bump, cd:notify, ..."
+    description: "Core step: build, test, lint, publish, image:build, image:scan, image:publish, deps:scan, sonar, svace, appscreener, kcs, helm:lint, helm:publish, cd:bump, cd:notify, ..."
     required: true
   workdir:
-    description: Каталог проекта относительно корня репозитория
+    description: Project directory relative to the repository root
     required: false
     default: "."
   runtime:
-    description: Рантайм (maven, gradle, nodejs, …). Пусто — автоопределение / .ci.yaml
+    description: Runtime (maven, gradle, nodejs, …). Empty — auto-detect / .ci.yaml
     required: false
     default: ""
   runtime-version:
-    description: Версия рантайма
+    description: Runtime version
     required: false
     default: ""
   service-type:
-    description: image или library
+    description: image or library
     required: false
     default: ""
   profile:
-    description: Профиль рантайма (например quarkus)
+    description: Runtime profile (e.g. quarkus)
     required: false
     default: ""
   strict:
-    description: "false — мягкие шаги не валят job (код 78 → warning)"
+    description: "false — soft steps don't fail the job (code 78 → warning)"
     required: false
     default: "true"
   ci-bin:
-    description: Путь к бинарнику ci (по умолчанию ci из PATH / /opt/ci/bin)
+    description: Path to the ci binary (defaults to ci from PATH / /opt/ci/bin)
     required: false
     default: "ci"
   args:
-    description: "Дополнительные аргументы ci через пробел (--image-build-mode=dockerfile …)"
+    description: "Extra space-separated ci arguments (--image-build-mode=dockerfile …)"
     required: false
     default: ""
 
@@ -57,7 +57,7 @@ runs:
         runner="${GITHUB_ACTION_PATH}/run-step.sh"
         [[ -x "$runner" ]] || runner="${GITHUB_ACTION_PATH}/../common/run-step.sh"
         chmod +x "$runner" 2>/dev/null || true
-        # Пустые inputs не должны перекрывать .ci.yaml / defaults.
+        # Empty inputs must not override .ci.yaml / defaults.
         unset_if_empty() { [[ -n "${!1}" ]] || unset "$1"; }
         unset_if_empty HCI_RUNTIME
         unset_if_empty HCI_RUNTIME_VERSION

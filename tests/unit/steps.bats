@@ -70,7 +70,7 @@ teardown() { hci_teardown_workdir; }
 @test "image:build: пустой контекст — понятная ошибка" {
   run "$HCI_TEST_BIN" image:build --runtime=static --image-build-mode=base --runtime-image=base:1 --image-context='nothing/*'
   [ "$status" -ne 0 ]
-  [[ "$output" == *"ничего не найдено"* ]]
+  [[ "$output" == *"Nothing found"* ]]
 }
 
 @test "image:scan: один проход trivy, SBOM и порог из отчёта" {

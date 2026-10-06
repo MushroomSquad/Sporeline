@@ -51,7 +51,7 @@ config::parse_args() {
         key="${key#--}"
         key="${key^^}"
         key="${key//-/_}"
-        [[ "$key" =~ ^[A-Z][A-Z0-9_]*$ ]] || log::die "Некорректный аргумент: $arg"
+        [[ "$key" =~ ^[A-Z][A-Z0-9_]*$ ]] || log::die "Invalid argument: $arg"
         config::set "HCI_$key" "$value"
         ;;
       *) HCI_ARGS+=("$arg") ;;
@@ -81,7 +81,7 @@ JQ
 config::find_file() {
   local candidate
   if [[ -n "${HCI_CONFIG_FILE:-}" ]]; then
-    [[ -f "$HCI_CONFIG_FILE" ]] || log::die "Файл конфигурации не найден: $HCI_CONFIG_FILE"
+    [[ -f "$HCI_CONFIG_FILE" ]] || log::die "Configuration file not found: $HCI_CONFIG_FILE"
     printf '%s' "$HCI_CONFIG_FILE"
     return 0
   fi
@@ -97,11 +97,11 @@ config::find_file() {
 config::load_file() {
   local file kind name b64 value
   file="$(config::find_file)" || return 0
-  log::debug "Конфигурация из $file"
+  log::debug "Configuration from $file"
   while IFS=$'\t' read -r kind name b64; do
     value="$(printf '%s' "$b64" | base64 -d)"
     if [[ "$kind" == "E" ]]; then
-      [[ "$name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || log::die "Некорректное имя переменной в env: $name"
+      [[ "$name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || log::die "Invalid variable name in env: $name"
       if [[ -z "${!name+x}" ]]; then
         printf -v "$name" '%s' "$value"
         export "${name?}"
@@ -126,7 +126,7 @@ config::load_defaults() {
       [[ "$name" != HCI_* && -n "${!name+x}" ]] && continue
       eval "export $name=$rhs"
     else
-      log::die "Некорректная строка в $file: $line"
+      log::die "Invalid line in $file: $line"
     fi
   done < "$file"
 }
@@ -161,7 +161,7 @@ config::load_profiles() {
   for p in "${profiles[@]+"${profiles[@]}"}"; do
     [[ -n "$p" && "$p" != "none" ]] || continue
     file="$HCI_HOME/runtimes/$HCI_RUNTIME/profiles/$p.env"
-    [[ -f "$file" ]] || log::die "Профиль '$p' не найден для рантайма $HCI_RUNTIME"
+    [[ -f "$file" ]] || log::die "Profile '$p' not found for runtime $HCI_RUNTIME"
     config::load_defaults "$file"
   done
 }
@@ -175,7 +175,7 @@ config::load() {
   if [[ "$HCI_RUNTIME" != "none" && ! -d "$HCI_HOME/runtimes/$HCI_RUNTIME" ]]; then
     local available=("$HCI_HOME"/runtimes/*/)
     available=("${available[@]%/}")
-    log::die "Неизвестный рантайм '$HCI_RUNTIME'. Доступны: ${available[*]##*/}"
+    log::die "Unknown runtime '$HCI_RUNTIME'. Available: ${available[*]##*/}"
   fi
 
   config::load_defaults "$HCI_HOME/defaults.env"

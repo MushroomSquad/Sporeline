@@ -110,9 +110,9 @@ rt::svace_build_cmd() { printf 'true'; }
 rt::detect_tools() { printf 'package_manager=%s\n' "$(node::pm)"; }
 
 node::publish() {
-  naming::is_release || ci::is_true "${HCI_PUBLISH_SNAPSHOTS:-false}" || ci::skip "публикация только по тегу"
+  naming::is_release || ci::is_true "${HCI_PUBLISH_SNAPSHOTS:-false}" || ci::skip "publish only runs on a tag"
   local root="${HCI_NODE_PUBLISH_PATH:-.}" names=() dir url host repo user pass auth registry
-  [[ -d "$root" ]] || log::die "Каталог публикации не найден: $root (HCI_NODE_PUBLISH_PATH)"
+  [[ -d "$root" ]] || log::die "Publish directory not found: $root (HCI_NODE_PUBLISH_PATH)"
   ci::split names "${HCI_NODE_PUBLISH_NAME:-}"
   url="$(registry::url NPM push)/"
   host="$(registry::host NPM)"
@@ -133,11 +133,11 @@ node::publish() {
   else
     for dir in "$root"/*/; do [[ -f "${dir}package.json" ]] && targets+=("${dir%/}"); done
   fi
-  [[ ${#targets[@]} -gt 0 ]] || log::die "Нечего публиковать в $root"
+  [[ ${#targets[@]} -gt 0 ]] || log::die "Nothing to publish in $root"
   ci::require npm
   for t in "${targets[@]}"; do
     pj="$t/package.json"
-    [[ -f "$pj" ]] || log::die "Нет $pj"
+    [[ -f "$pj" ]] || log::die "$pj not found"
     if [[ "$(jq -r '.publishConfig.provenance // false' "$pj")" == "true" ]]; then
       jq '.publishConfig.provenance = false' "$pj" > "$pj.tmp" && mv "$pj.tmp" "$pj"
     fi

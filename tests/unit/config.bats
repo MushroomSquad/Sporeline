@@ -71,5 +71,5 @@ EOF
 @test "неизвестный рантайм — понятная ошибка" {
   run "$HCI_TEST_BIN" config --runtime=cobol
   [ "$status" -ne 0 ]
-  [[ "$output" == *"Неизвестный рантайм 'cobol'"* ]]
+  [[ "$output" == *"Unknown runtime 'cobol'"* ]]
 }

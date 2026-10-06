@@ -60,8 +60,8 @@ manifest::add() {
   shift 4
   local known=0 t
   for t in "${HCI_MANIFEST_TYPES[@]}"; do [[ "$t" == "$type" ]] && known=1; done
-  (( known )) || log::die "manifest::add: неизвестный тип '$type'"
-  [[ -n "$name" && -n "$version" ]] || log::die "manifest::add: пустое имя или версия ($type '$name' '$version')"
+  (( known )) || log::die "manifest::add: unknown type '$type'"
+  [[ -n "$name" && -n "$version" ]] || log::die "manifest::add: empty name or version ($type '$name' '$version')"
 
   local digest="" kv
   for kv in "$@"; do [[ "$kv" == digest=* ]] && digest="${kv#digest=}"; done
@@ -80,12 +80,12 @@ manifest::add() {
   file="$(manifest::file)"
   tmp="$(mktemp)"
   jq --argjson a "$obj" '.artifacts += [$a]' "$file" > "$tmp" && mv "$tmp" "$file"
-  log::ok "Артефакт: $type $name@$version"
+  log::ok "Artifact: $type $name@$version"
 }
 
 manifest::validate() {
   local file="${1:-$(manifest::file)}"
-  [[ -f "$file" ]] || log::die "Манифест не найден: $file"
+  [[ -f "$file" ]] || log::die "Manifest not found: $file"
   jq -e --argjson types "$(printf '%s\n' "${HCI_MANIFEST_TYPES[@]}" | jq -R . | jq -s .)" '
     .schemaVersion == 2
     and (.pipeline | type == "object")
@@ -97,6 +97,6 @@ manifest::validate() {
       and (.registry | type == "string")
       and (.purl | type == "string" and startswith("pkg:"))
       and (if .type == "oci" then (.digest | type == "string" and test("^sha256:[a-f0-9]{64}$")) else true end))
-  ' "$file" >/dev/null || log::die "Манифест $file не соответствует схеме v2"
-  log::ok "Манифест $file корректен ($(jq '.artifacts | length' "$file") артефактов)"
+  ' "$file" >/dev/null || log::die "Manifest $file does not conform to schema v2"
+  log::ok "Manifest $file is valid ($(jq '.artifacts | length' "$file") artifacts)"
 }

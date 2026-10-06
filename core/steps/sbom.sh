@@ -4,7 +4,7 @@
 sbom::image() {
   local oci="$HCI_WORKDIR_ABS/$HCI_OCI_DIR" args=()
   ci::require trivy
-  [[ -d "$oci" ]] || log::die "Нет $HCI_OCI_DIR для генерации SBOM"
+  [[ -d "$oci" ]] || log::die "No $HCI_OCI_DIR to generate an SBOM from"
   trivy::args args
   mkdir -p "$(dirname "$HCI_SBOM_FILE")"
   log::cmd trivy image "${args[@]}" --input "$oci" --format cyclonedx --output "$HCI_SBOM_FILE"

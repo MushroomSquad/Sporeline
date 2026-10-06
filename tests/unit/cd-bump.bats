@@ -97,7 +97,7 @@ EOF
 
   run cd_bump::apply_commit
   [ "$status" -ne 0 ]
-  [[ "$output" == *"не найден или пуст"* ]]
+  [[ "$output" == *"not found or empty"* ]]
   [ "$(cat "$WORKDIR/app.yaml")" = "$before" ]
   git -C "$dir" diff --quiet -- app.yaml
   [ "$(git -C "$dir" log --oneline | wc -l)" -eq 1 ]
@@ -135,7 +135,7 @@ EOF
   run cd_bump::apply_commit
   [ "$status" -ne 0 ]
   # confirm it failed specifically due to numstat (gate 3), not something else — check exact text
-  [[ "$output" == *"не только строку образа"* ]]
+  [[ "$output" == *"more than just the image line"* ]]
   # nothing committed or staged because of the failure
   git -C "$dir" diff --cached --quiet
   [ "$(git -C "$dir" log --oneline | wc -l)" -eq 1 ]
@@ -156,7 +156,7 @@ EOF
   # passes via the "-z" branch, git add changes nothing, diff --cached --quiet is true -> return 0, no commit
   run cd_bump::apply_commit
   [ "$status" -eq 0 ]
-  [[ "$output" == *"уже актуально"* ]]
+  [[ "$output" == *"already up to date"* ]]
   [ "$(git -C "$dir" log --oneline | wc -l)" -eq 2 ]
 }
 

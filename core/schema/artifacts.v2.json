@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://hyperion.local/schemas/artifacts.v2.json",
-  "title": "Манифест опубликованных артефактов сборки",
+  "title": "Build-published artifacts manifest",
   "type": "object",
   "required": ["schemaVersion", "pipeline", "artifacts"],
   "additionalProperties": false,
@@ -32,10 +32,10 @@
           "registry": { "type": "string" },
           "purl": { "type": "string", "pattern": "^pkg:" },
           "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
-          "tags": { "type": "string", "description": "Дополнительные теги через запятую" },
+          "tags": { "type": "string", "description": "Additional tags, comma-separated" },
           "sbom": { "enum": ["cyclonedx", "none"] },
           "signed": { "type": "boolean" },
-          "files": { "type": "string", "description": "Опубликованные файлы через запятую" }
+          "files": { "type": "string", "description": "Published files, comma-separated" }
         },
         "allOf": [
           { "if": { "properties": { "type": { "const": "oci" } } }, "then": { "required": ["digest"] } }

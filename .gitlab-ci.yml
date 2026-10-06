@@ -1,4 +1,4 @@
-# CI репозитория шаблонов: проверка ядра, генерация компонентов, образы, e2e.
+# CI for the templates repository: core checks, component generation, images, e2e.
 
 stages: [lint, test, images, e2e, release]
 
@@ -57,7 +57,7 @@ test:unit:
     - bats tests/unit
     - python3 -m unittest discover -s tests/unit -p 'test_*.py'
 
-# Проверка, что все гранулярные компоненты валидны как компоненты (include + inputs).
+# Checks that every granular component is valid as a component (include + inputs).
 test:granular-selfcheck:
   stage: test
   needs: []
@@ -88,6 +88,6 @@ release:
   image: $TOOLS_IMAGE
   interruptible: false
   script:
-    - echo "Версия ядра $(cat core/VERSION)"
+    - echo "Core version $(cat core/VERSION)"
   rules:
     - if: $CI_COMMIT_TAG

@@ -46,7 +46,7 @@ EOF
     elif [[ "$insecure" == true ]]; then
       : > "$kh"
     else
-      log::die "Не задана HCI_CD_GIT_SSH_KNOWN_HOSTS (путь или содержимое). Получите ключ хоста: ssh-keyscan -H <host>; либо явно задайте HCI_CD_GIT_SSH_INSECURE=true"
+      log::die "HCI_CD_GIT_SSH_KNOWN_HOSTS is not set (path or content). Get the host key: ssh-keyscan -H <host>; or explicitly set HCI_CD_GIT_SSH_INSECURE=true"
     fi
     opts="-i $key -o IdentitiesOnly=yes -o BatchMode=yes -o UserKnownHostsFile=$kh"
     [[ "$insecure" == true ]] && opts+=" -o StrictHostKeyChecking=accept-new"
@@ -63,20 +63,20 @@ cd_bump::apply_commit() {
 
   # Gate 1 — the path exists and is non-empty BEFORE the write. Catches a typo in the path or a
   # wrong array index: `yq -i '<path> = ...'` on a non-existent path doesn't fail, it creates the path and exits 0.
-  yq -e "$HCI_CD_YAML_PATH" "$f" >/dev/null 2>&1 || log::die "путь $HCI_CD_YAML_PATH не найден или пуст в $HCI_CD_YAML_FILE"
+  yq -e "$HCI_CD_YAML_PATH" "$f" >/dev/null 2>&1 || log::die "path $HCI_CD_YAML_PATH not found or empty in $HCI_CD_YAML_FILE"
   # strenv(REF), not "\"$ref\"" interpolation: a value containing a quote or $ would alter the yq expression itself
   REF="$ref" yq -i "$HCI_CD_YAML_PATH = strenv(REF)" "$f"
   # Gate 2 — the edit landed exactly where intended (the path could have matched the wrong thing)
-  [[ "$(yq "$HCI_CD_YAML_PATH" "$f")" == "$ref" ]] || log::die "правка не применилась: $HCI_CD_YAML_PATH ≠ $ref"
+  [[ "$(yq "$HCI_CD_YAML_PATH" "$f")" == "$ref" ]] || log::die "edit didn't apply: $HCI_CD_YAML_PATH ≠ $ref"
   # Gate 3 — yq touched nothing but the image line. Gates 1+2 only look at one path and miss
   # collateral rewrites of neighboring lines (a real example: a merge-key `<<: *def`
   # turns into `!!merge <<: *def`). `-z` makes a repeat call on an already-applied ref idempotent.
   local st; st="$(git -C "$dir" diff --numstat -- "$HCI_CD_YAML_FILE")"
-  [[ -z "$st" || "$st" == $'1\t1\t'* ]] || log::die "yq изменил не только строку образа в $HCI_CD_YAML_FILE ($st) — отказ. Полный диф:
+  [[ -z "$st" || "$st" == $'1\t1\t'* ]] || log::die "yq changed more than just the image line in $HCI_CD_YAML_FILE ($st) — aborting. Full diff:
 $(git -C "$dir" diff -- "$HCI_CD_YAML_FILE")"
 
   git -C "$dir" add -- "$HCI_CD_YAML_FILE"
-  git -C "$dir" diff --cached --quiet && { log::ok "cd:bump — уже актуально, пропускаю коммит"; return 0; }
+  git -C "$dir" diff --cached --quiet && { log::ok "cd:bump — already up to date, skipping commit"; return 0; }
   git -C "$dir" -c user.name="${HCI_CD_GIT_USER_NAME:-hyperion-ci}" -c user.email="${HCI_CD_GIT_USER_EMAIL:-ci@localhost}" \
     commit -m "deploy: $ref"
 }
@@ -102,14 +102,14 @@ cd_bump::push_with_retry() {
     # LC_ALL=C forces English git messages: the `non-fast-forward` wording is localized in
     # some translation catalogs, and the classifier must not depend on the runner's locale
     if LC_ALL=C git -C "$dir" -c credential.helper= push origin "HEAD:refs/heads/$branch" 2>"$HCI_TMP/push.err"; then
-      log::ok "cd:bump — запушено в $url ($branch)"
+      log::ok "cd:bump — pushed to $url ($branch)"
       return 0
     fi
     cat "$HCI_TMP/push.err" >&2
     local kind; kind="$(cd_bump::classify_push_error "$HCI_TMP/push.err")"
-    [[ "$kind" != "fatal" ]] || log::die "push не удался (не ретраится): $(cat "$HCI_TMP/push.err")"
-    (( try < attempts )) || log::die "push не удался после $attempts попыток"
-    log::warn "push конфликт/ошибка ($kind), попытка $try/$attempts, повтор через ${delay}с"
+    [[ "$kind" != "fatal" ]] || log::die "push failed (not retrying): $(cat "$HCI_TMP/push.err")"
+    (( try < attempts )) || log::die "push failed after $attempts attempts"
+    log::warn "push conflict/error ($kind), attempt $try/$attempts, retrying in ${delay}s"
     sleep "$delay"
     # retryable-plain — a network blip: local state is valid, the exact same push just needs
     # to be retried. Only a ref conflict requires fetch+reset+reapplying the edit.
@@ -129,16 +129,16 @@ step::cd_bump() {
   ci::require git yq jq
 
   local url="${HCI_CD_GIT_URL:-}"
-  [[ -n "$url" ]] || log::die "Не задана HCI_CD_GIT_URL"
+  [[ -n "$url" ]] || log::die "HCI_CD_GIT_URL is not set"
   # userinfo in http(s) always means an embedded credential; in ssh://user@host:port it's a
   # mandatory part of the address, so the gate is narrowed to http*://*@*. ${url,,} makes the
   # scheme case-insensitive, both for git and per RFC 3986; without lowercasing, "HTTPS://tok@host"
   # would pass the gate, and the token — never registered via log::mask (it isn't in
   # HCI_CD_GIT_TOKEN) — would leak both into the log (log::cmd on clone) and permanently
   # into artifacts.json (manifest::add, expire="never")
-  [[ "${url,,}" != http*://*@* ]] || log::die "HCI_CD_GIT_URL содержит credential в URL — используйте HCI_CD_GIT_TOKEN или HCI_CD_GIT_SSH_KEY"
-  [[ -n "${HCI_CD_YAML_FILE:-}" ]] || log::die "Не задана HCI_CD_YAML_FILE"
-  [[ -n "${HCI_CD_YAML_PATH:-}" ]] || log::die "Не задана HCI_CD_YAML_PATH"
+  [[ "${url,,}" != http*://*@* ]] || log::die "HCI_CD_GIT_URL contains a credential in the URL — use HCI_CD_GIT_TOKEN or HCI_CD_GIT_SSH_KEY instead"
+  [[ -n "${HCI_CD_YAML_FILE:-}" ]] || log::die "HCI_CD_YAML_FILE is not set"
+  [[ -n "${HCI_CD_YAML_PATH:-}" ]] || log::die "HCI_CD_YAML_PATH is not set"
 
   # The image-ref is computed ONCE, in $HCI_WORKDIR_ABS, before the clone; only $ref is used after that
   local ref
@@ -146,12 +146,12 @@ step::cd_bump() {
     ref="$HCI_CD_IMAGE"
   else
     local mf; mf="$(manifest::file)"
-    [[ -f "$mf" ]] || log::die "digest недоступен: нет $mf — добавьте image:publish в needs или задайте HCI_CD_IMAGE"
+    [[ -f "$mf" ]] || log::die "digest unavailable: $mf not found — add image:publish to needs or set HCI_CD_IMAGE"
     # Validate not just the digest but also .registry/.name — otherwise null/app@sha256:... would
     # pass all three yq gates (they check "did it land where intended", not "is the value
     # meaningful") and ship off to the wrong repository, only breaking as ImagePullBackOff in the cluster
     ref="$(jq -er '[.artifacts[]|select(.type=="oci" and (.registry//""|length>0) and (.name//""|length>0) and (.digest//""|test("^sha256:[a-f0-9]{64}$")))]|last|select(.)|"\(.registry)/\(.name)@\(.digest)"' "$mf")" \
-      || log::die "digest недоступен: в $mf нет валидной oci-записи (registry/name/digest)"
+      || log::die "digest unavailable: no valid oci entry (registry/name/digest) in $mf"
   fi
 
   # Unconditional, not just in the token branch of auth() — otherwise on the ssh path, or with
@@ -159,7 +159,7 @@ step::cd_bump() {
   # hangs until the CI timeout.
   export GIT_TERMINAL_PROMPT=0
   [[ -n "${HCI_CD_GIT_TOKEN:-}${HCI_CD_GIT_SSH_KEY:-}" ]] \
-    || log::die "Не задана ни HCI_CD_GIT_TOKEN, ни HCI_CD_GIT_SSH_KEY — push невозможен (проверьте, что переменная доступна на этом ref: protected-переменные не видны непротектед-тегам/веткам)"
+    || log::die "Neither HCI_CD_GIT_TOKEN nor HCI_CD_GIT_SSH_KEY is set — push is not possible (check that the variable is available on this ref: protected variables aren't visible to unprotected tags/branches)"
   cd_bump::auth
 
   local dir="$HCI_TMP/gitops" branch="${HCI_CD_GIT_BRANCH:-}"
@@ -173,8 +173,8 @@ step::cd_bump() {
   branch="$(git -C "$dir" rev-parse --abbrev-ref HEAD)"
   # Detached HEAD (the clone pointed at a tag, not a branch) yields the literal "HEAD" — pushing
   # to a non-existent refs/heads/HEAD would create a garbage branch in someone else's repository
-  [[ "$branch" != "HEAD" ]] || log::die "HCI_CD_GIT_URL указывает на тег/detached HEAD, не на ветку — задайте HCI_CD_GIT_BRANCH явно"
-  [[ -f "$dir/$HCI_CD_YAML_FILE" ]] || log::die "нет $HCI_CD_YAML_FILE в репозитории (ветка $branch)"
+  [[ "$branch" != "HEAD" ]] || log::die "HCI_CD_GIT_URL points at a tag/detached HEAD, not a branch — set HCI_CD_GIT_BRANCH explicitly"
+  [[ -f "$dir/$HCI_CD_YAML_FILE" ]] || log::die "$HCI_CD_YAML_FILE not found in the repository (branch $branch)"
 
   log::info "cd:bump — $HCI_CD_YAML_FILE: $HCI_CD_YAML_PATH = $ref"
   cd_bump::push_with_retry

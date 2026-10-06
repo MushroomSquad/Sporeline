@@ -1,6 +1,6 @@
 name: bun
 title: Bun
-description: Сборка и тесты на Bun. Публикация пакетов через npm registry.
+description: Build and test with Bun. Package publishing via the npm registry.
 default_version: "1"
 service_types: [image, library]
 steps: [build, test, lint, publish, image:build, image:scan, image:publish, cd:bump, cd:notify, deps:scan, sonar, appscreener]

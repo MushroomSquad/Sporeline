@@ -1,6 +1,6 @@
 name: gradle
 title: Java (Gradle)
-description: Gradle-проекты (wrapper или системный gradle).
+description: Gradle projects (wrapper or a system-installed gradle).
 default_version: "21"
 service_types: [image, library]
 steps: [build, test, publish, image:build, image:scan, image:publish, cd:bump, cd:notify, deps:scan, sonar, svace, appscreener, kcs]

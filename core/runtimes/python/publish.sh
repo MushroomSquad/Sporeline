@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 rt::publish() {
-  naming::is_release || ci::skip "публикация пакета только по тегу"
+  naming::is_release || ci::skip "package publish only runs on a tag"
   [[ -d dist ]] || python::export_reqs requirements.txt
   if [[ ! -d dist ]]; then
     if ci::has uv; then

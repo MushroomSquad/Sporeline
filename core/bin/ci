@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Точка входа CI-независимого ядра сборки. См. `ci help`.
+# Entrypoint for the CI-agnostic build core. See `ci help`.
 set -Eeuo pipefail
 
 if [[ -z "${HCI_HOME:-}" ]]; then

@@ -6,7 +6,7 @@
 set -uo pipefail
 
 step="${1:-}"
-[[ -n "$step" ]] || { echo "Использование: run-step.sh <шаг> [аргументы ci...]" >&2; exit 2; }
+[[ -n "$step" ]] || { echo "Usage: run-step.sh <step> [ci arguments...]" >&2; exit 2; }
 shift
 
 ci_bin="${HCI_CI_BIN:-ci}"
@@ -26,7 +26,7 @@ set -e
 
 soft="${HCI_SOFT_EXIT_CODE:-78}"
 if [[ "$rc" -eq "$soft" ]]; then
-  msg="hci $step: мягкий отказ (код $soft), пайплайн не блокируется"
+  msg="hci $step: soft failure (code $soft), pipeline not blocked"
   if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
     echo "::warning::$msg"
   elif [[ -n "${JENKINS_URL:-}" ]]; then

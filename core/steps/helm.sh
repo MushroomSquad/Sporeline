@@ -7,7 +7,7 @@ helm::chart() {
 
 step::helm_lint() {
   ci::require helm kubeconform
-  [[ -f "$HCI_HELM_CHART_DIR/Chart.yaml" ]] || ci::skip "Chart.yaml не найден в $HCI_HELM_CHART_DIR"
+  [[ -f "$HCI_HELM_CHART_DIR/Chart.yaml" ]] || ci::skip "Chart.yaml not found in $HCI_HELM_CHART_DIR"
   local values=() v vargs=() kargs=()
   ci::split values "${HCI_HELM_VALUES:-values.yaml}"
   for v in "${values[@]}"; do vargs+=(-f "$v"); done
@@ -19,7 +19,7 @@ step::helm_lint() {
 
 step::helm_publish() {
   ci::require helm
-  naming::is_release || ci::is_true "${HCI_PUBLISH_SNAPSHOTS:-false}" || ci::skip "публикация чарта только по тегу"
+  naming::is_release || ci::is_true "${HCI_PUBLISH_SNAPSHOTS:-false}" || ci::skip "chart publish only runs on a tag"
   local name version pkg
   name="$(helm::chart name)"
   version="$(naming::version)"

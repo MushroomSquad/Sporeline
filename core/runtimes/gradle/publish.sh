@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 rt::publish() {
-  naming::is_release || ci::is_true "${HCI_PUBLISH_SNAPSHOTS:-false}" || ci::skip "публикация библиотеки только по тегу"
+  naming::is_release || ci::is_true "${HCI_PUBLISH_SNAPSHOTS:-false}" || ci::skip "library publish only runs on a tag"
   local kind=push url init
   naming::is_release || kind=snapshot
   url="$(registry::url MAVEN "$kind")"

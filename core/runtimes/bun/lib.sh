@@ -21,7 +21,7 @@ bun::install() {
   if ci::is_true "${HCI_NODE_IGNORE_LOCK:-false}"; then
     log::cmd bun install
   else
-    [[ -f bun.lock || -f bun.lockb ]] || log::die "Нет bun.lock / bun.lockb. Задайте HCI_NODE_IGNORE_LOCK=true, чтобы продолжить."
+    [[ -f bun.lock || -f bun.lockb ]] || log::die "No bun.lock / bun.lockb. Set HCI_NODE_IGNORE_LOCK=true to continue."
     log::cmd bun install --frozen-lockfile
   fi
 }

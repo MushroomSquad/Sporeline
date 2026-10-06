@@ -5,5 +5,5 @@ rt::lint() {
     log::cmd ruff check .
     return 0
   fi
-  ci::skip "нет конфигурации ruff"
+  ci::skip "no ruff configuration"
 }

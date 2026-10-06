@@ -77,7 +77,7 @@ _notify_fake_curl_setup() {
   run cd_notify::attempt
   [ "$status" -ne 0 ]
   [[ "$output" == *"404"* ]]
-  [[ "$output" == *"без ретрая"* ]]
+  [[ "$output" == *"not retrying"* ]]
 }
 
 @test "attempt: 5xx -> ненулевой код, но не фатально (retry() должен повторить)" {
@@ -93,7 +93,7 @@ _notify_fake_curl_setup() {
   FAKE_CURL_MODE=neterr
   run cd_notify::attempt
   [ "$status" -eq 7 ]
-  [[ "$output" == *"сетевая ошибка"* ]]
+  [[ "$output" == *"network error"* ]]
 }
 
 # --- The "-K - instead of -H" contract for Authorization ----------------------------------------------

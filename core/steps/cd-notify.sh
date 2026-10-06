@@ -25,21 +25,21 @@ cd_notify::attempt() {
   # no --fail/--fail-with-body: we need the status code itself, --fail discards it before we can read it
   out="$(curl -sS -w '\n%{http_code}' "${curl_args[@]}" -K - <<< "$conf")" || rc=$?
   if (( rc != 0 )); then
-    log::warn "cd:notify — curl завершился с кодом $rc (сетевая ошибка), $safe"
+    log::warn "cd:notify — curl exited with code $rc (network error), $safe"
     return "$rc"
   fi
   code="${out##*$'\n'}"
   body="${out%$'\n'*}"
   case "$code" in
-    2*) log::ok "cd:notify — $safe вернул $code"; return 0 ;;
-    4*) log::die "cd:notify — $safe вернул $code (ошибка запроса, без ретрая): $body" ;;
-    *) log::warn "cd:notify — $safe вернул $code: $body"; return 1 ;;
+    2*) log::ok "cd:notify — $safe returned $code"; return 0 ;;
+    4*) log::die "cd:notify — $safe returned $code (request error, not retrying): $body" ;;
+    *) log::warn "cd:notify — $safe returned $code: $body"; return 1 ;;
   esac
 }
 
 step::cd_notify() {
   ci::require curl
-  [[ -n "${HCI_CD_NOTIFY_URL:-}" ]] || log::die "Не задана HCI_CD_NOTIFY_URL"
+  [[ -n "${HCI_CD_NOTIFY_URL:-}" ]] || log::die "HCI_CD_NOTIFY_URL is not set"
 
   local tls=() curl_args=() conf="" safe body hdr method
   tls::curl_args tls
